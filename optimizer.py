@@ -9,10 +9,11 @@ def parabola_minimum(a, b, c, f_a, f_b, f_c):
     return b - num/den
 
 
-class Optimizer:
+class Minimizer:
     def __init__(self, func: callable, args:tuple=()):
         self.func = func
         self.args = args
+
 
     def bracket(self, a:float, b:float, maxit:int=100) -> tuple[float, float, float]:
         """        
@@ -70,7 +71,7 @@ class Optimizer:
         raise Exception(f'could not find bracket in {maxit} iterations')
         
 
-    def minimize_tighten(self, bracket:tuple[float,float,float], abserr:float=1e-5, relerr:float=1e-5, maxit:int=100) -> float:
+    def tighten(self, bracket:tuple[float,float,float], abserr:float=1e-5, relerr:float=1e-5, maxit:int=100) -> float:
         """
         Returns the x_val at which the minimum resides inside a bracket by golden section search algorithm.
 
@@ -135,31 +136,3 @@ class Optimizer:
                 return b
     
         raise Exception(f'could not find minimum with expected tolerance in {maxit+1} iterations')
-
-
-    def maximize_tighten(self, bracket:tuple[float,float,float], abserr:float=1e-5, relerr:float=1e-5, maxit:int=100) -> float:
-        """
-        Returns the x_val at which maximum resides inside a bracket by golden section search algorithm.
-
-        Args:
-            bracket (tuple[float,float,float]): bracket (must contain a, b, c)
-            abserr (float, optional): _description_. Defaults to 1e-5
-            relerr (float, optional): _description_. Defaults to 1e-5
-            maxit (int, optional): _description_. Defaults to 100.
-            
-        Raises:
-            Exception: If it does not find a bracket within max iterations, it raises an exception.
-            
-        Returns:
-            float: returns x_value at which maximum is located.
-        """
-        original_func = self.func  # store original function
-        
-        # redefine temporarily as minus func, to find maximum
-        self.func = lambda x, *args: -original_func(x, *args)
-        x_max = self.minimize_tighten(bracket, abserr, relerr, maxit)
-        
-        # restore original function
-        self.func = original_func
-        
-        return x_max

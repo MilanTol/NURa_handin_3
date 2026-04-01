@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from chi2 import chi2
-from optimizer import Optimizer
+from optimizer import Minimizer
 
 def readfile(filename):
     """
@@ -256,11 +256,21 @@ def do_question_1a():
     Nsat = 100
     A_1a = 256 / (5 * np.pi ** (3 / 2))
     # x_lower, x_upper = 10**-4, 5
-
-    optimizer = Optimizer(func=N, args=(A_1a, Nsat, a, b, c))
-    bracket = optimizer.bracket(1e-4, 1e-3)
-    x_max = optimizer.maximize_tighten(bracket)
-    Nx_max = N(x_max, A_1a, Nsat, a, b, c)
+    
+    # set N in logspace instead to make computations faster
+    negative_N_logspace = lambda x: -N(np.exp(x), A_1a, Nsat, a, b, c)
+    
+    x_logvals = np.geomspace(1e-4, 5, 100)
+    plt.plot(x_logvals, negative_N_logspace(np.log(x_logvals)))
+    plt.xscale('log')
+    plt.show()
+    
+    minimizer = Minimizer(func=negative_N_logspace)
+    bracket = minimizer.bracket(-4, -3)
+    
+    logx_max = minimizer.tighten(bracket)
+    x_max = np.exp(logx_max)
+    Nx_max = N(np.exp(x_max), A_1a, Nsat, a, b, c)
 
     # Write the results to text files for later use in the PDF
     with open("Calculations/satellite_max_x.txt", "w") as f:
