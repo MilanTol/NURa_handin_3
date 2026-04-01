@@ -2,6 +2,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from chi2 import chi2
+from optimizer import Optimizer
 
 def readfile(filename):
     """
@@ -61,7 +63,35 @@ def n(x: np.ndarray, A: float, Nsat: float, a: float, b: float, c: float) -> np.
         Same type and shape as x. Number density of satellite galaxies
         at given radius x.
     """
-    return 0  # insert your function (copy from hand-in 2)
+    b_inv = 1 / b
+    return A * Nsat * (x * b_inv) ** (a - 3) * np.exp(-((x * b_inv) ** c))
+
+
+def N(x: np.ndarray, A: float, Nsat: float, a: float, b: float, c: float) -> np.ndarray:
+    """
+    Expected number of satellite galaxies at radius x.
+
+    Parameters
+    ----------
+    x : ndarray
+        Radius in units of virial radius; x = r / r_virial
+    A : float
+        Normalisation
+    Nsat : float
+        Average number of satellites
+    a : float
+        Small-scale slope
+    b : float
+        Transition scale
+    c : float
+        Steepness of exponential drop-off
+
+    Returns
+    -------
+    ndarray
+        Same type and shape as x. Expected number of satellite galaxies at radius x.
+    """
+    return 4*np.pi * x*x * n(x, A, Nsat, a, b, c)
 
 
 # Following the lectures, the function below provides a template for a custom minimization method.
@@ -98,29 +128,6 @@ def my_minimizer(
 
 
 #### Fitting ####
-
-
-def chi2(model: callable, data: np.ndarray, params: tuple) -> float:
-    """
-    Calculate the chi-squared for a given set of parameters and data.
-
-    Parameters
-    ----------
-    model : callable
-        The model function to compare to the data.
-    data : ndarray
-        The observed data to compare the model to.
-    params : tuple
-        The parameters to evaluate the model at.
-
-    Returns
-    -------
-    float
-        The chi-squared value for the given parameters and data.
-    """
-    # TODO: implement calculation of the chi2 value (or equivalent) using the model mean and variance to be minimized.
-
-    return 0.0  # replace by the correct value
 
 
 def negative_poisson_ln_likelihood(
@@ -248,17 +255,18 @@ def do_question_1a():
     c = 1.6
     Nsat = 100
     A_1a = 256 / (5 * np.pi ** (3 / 2))
-    x_lower, x_upper = 10**-4, 5
+    # x_lower, x_upper = 10**-4, 5
 
-    x_max, Nx_max = my_minimizer(lambda x: 0.0, np.array([0.0]), (x_lower, x_upper))
-    # replace with calculation of the maximum of N(x) based on n(x, A, Nsat, a, b, c) and your minimizer
+    optimizer = Optimizer(func=N, args=(A_1a, Nsat, a, b, c))
+    bracket = optimizer.bracket(1e-4, 1e-3)
+    x_max = optimizer.maximize_tighten(bracket)
+    Nx_max = N(x_max, A_1a, Nsat, a, b, c)
 
     # Write the results to text files for later use in the PDF
     with open("Calculations/satellite_max_x.txt", "w") as f:
         f.write(f"{x_max:.6f}")
     with open("Calculations/satellite_max_Nx.txt", "w") as f:
         f.write(f"{Nx_max:.6f}")
-
 
 def do_question_1b():
     # ======== Question 1b: Fitting N(x) with chi-squared ========
@@ -517,6 +525,7 @@ def do_question_1e():
 
 if __name__ == "__main__":
     do_question_1a()
+    exit()
     do_question_1b()
     do_question_1c()
     do_question_1d()
