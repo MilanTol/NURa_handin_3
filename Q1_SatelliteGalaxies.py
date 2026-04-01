@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from chi2 import chi2
 from optimizer import Minimizer
 
+
 def readfile(filename):
     """
     Helper function to read in the satellite galaxy data from the provided text files.
@@ -91,7 +92,7 @@ def N(x: np.ndarray, A: float, Nsat: float, a: float, b: float, c: float) -> np.
     ndarray
         Same type and shape as x. Expected number of satellite galaxies at radius x.
     """
-    return 4*np.pi * x*x * n(x, A, Nsat, a, b, c)
+    return 4 * np.pi * x * x * n(x, A, Nsat, a, b, c)
 
 
 # Following the lectures, the function below provides a template for a custom minimization method.
@@ -256,27 +257,33 @@ def do_question_1a():
     Nsat = 100
     A_1a = 256 / (5 * np.pi ** (3 / 2))
     # x_lower, x_upper = 10**-4, 5
-    
-    # set N in logspace instead to make computations faster
+
+    # set N in logspace to make computations faster, use -N since were finding maximum with minimizer.
     negative_N_logspace = lambda x: -N(np.exp(x), A_1a, Nsat, a, b, c)
-    
+
+    # Plot N, to inspect the function
     x_logvals = np.geomspace(1e-4, 5, 100)
-    plt.plot(x_logvals, negative_N_logspace(np.log(x_logvals)))
-    plt.xscale('log')
-    plt.show()
-    
+    plt.plot(x_logvals, -negative_N_logspace(np.log(x_logvals)))
+    plt.ylabel("N(x)")
+    plt.xlabel("x")
+    plt.xscale("log")
+    plt.savefig("Plots/1a_N(x)")
+    plt.close()
+
+    # instantiate minimizer object
     minimizer = Minimizer(func=negative_N_logspace)
-    bracket = minimizer.bracket(-4, -3)
-    
-    logx_max = minimizer.tighten(bracket)
-    x_max = np.exp(logx_max)
-    Nx_max = N(np.exp(x_max), A_1a, Nsat, a, b, c)
+    bracket = minimizer.bracket(-4, -3) # find bracket, starting from two x_values close enough to minimum
+
+    logx_max = minimizer.tighten(bracket) # find the log value of the x at which maximum of N(x) is attained
+    x_max = np.exp(logx_max) # convert to x_value
+    Nx_max = N(x_max, A_1a, Nsat, a, b, c)
 
     # Write the results to text files for later use in the PDF
     with open("Calculations/satellite_max_x.txt", "w") as f:
         f.write(f"{x_max:.6f}")
     with open("Calculations/satellite_max_Nx.txt", "w") as f:
         f.write(f"{Nx_max:.6f}")
+
 
 def do_question_1b():
     # ======== Question 1b: Fitting N(x) with chi-squared ========
@@ -535,8 +542,8 @@ def do_question_1e():
 
 if __name__ == "__main__":
     do_question_1a()
-    exit()
     do_question_1b()
+    exit()
     do_question_1c()
     do_question_1d()
     do_question_1e()
