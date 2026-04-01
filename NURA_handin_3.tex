@@ -1,0 +1,163 @@
+\documentclass{article}
+
+\usepackage[a4paper]{geometry}
+\usepackage[english]{babel}
+\usepackage{parskip}
+
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+  backgroundcolor=\color{backcolour},
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{magenta},
+  numberstyle=\tiny\color{codegray},
+  stringstyle=\color{codepurple},
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=5pt,
+  showstringspaces=false,
+  tabsize=2
+}
+\lstset{style=mystyle}
+
+\newcommand{\CodeDir}{Code}
+\newcommand{\PlotDir}{Plots}
+\newcommand{\CalcDir}{Calculations}
+
+\title{NURa Hand-in 3}
+\author{Name (Student number)}
+\date{Date}
+
+\begin{document}
+\maketitle
+
+\textit{Write a short description of your solution in each section. Explain your choices. Explicitly draw conclusions from your results.}
+
+\textit{You can refer to selected lines of code where you think it is necessary. However, you must provide the full code relevant to each (sub)question below it.}
+
+\textit{Don't forget to describe your figures and mention what conclusions you draw from them!}
+
+
+\section{Satellite galaxies around a massive central}
+
+\subsection{(1a) Maximum of N(x)}
+
+Explain the maximization algorithm used.
+
+The maximum of \(N(x)\) is found at:
+$$x_{\text{max}} \approx  \input{\CalcDir/satellite_max_x.txt} $$
+$$N(x_{\text{max}}) \approx  \input{\CalcDir/satellite_max_Nx.txt} $$
+
+\subsubsection{Code for N(x) maximization}
+NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
+\lstinputlisting[language=Python]{\CodeDir/satellites_maximize_code.txt}
+
+\subsection{(1b) $\chi^2$-fit}
+
+Argue the choices of your binning. Explain the minimization routine used. Bonus points for a correctly implemented derivative-based routine.
+
+\begin{table}[H]
+\centering
+\caption{Best-fit parameters for $\chi^2$ fits.}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+Dataset & $N_{\mathrm{sat}}$ & $\chi^2$ & $a$ & $b$ & $c$ \\
+\hline
+\input{Calculations/table_fitparams_chi2.tex} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{\PlotDir/satellite_fits_chi2.png}
+\caption{Fit of the satellite number density profile using the chi-squared method.}
+\end{figure}
+
+\subsubsection{Code for $\chi^2$-fit}
+NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
+\lstinputlisting[language=Python]{\CodeDir/satellites_chi2_code.txt}
+ 
+\subsection{(1c) Poisson ln-likelihood fit}
+
+Explain how you determine the Poisson ln-likelihood. Describe the optimization method used. How do your best fit parameters differ from the ones obtained in (1b)? Why?
+
+\begin{table}[H]
+\centering
+\caption{Best-fit parameters for $\chi^2$ fits.}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+Dataset  & llh & $a$ & $b$ & $c$ \\
+\hline
+\input{Calculations/table_fitparams_poisson.tex} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{\PlotDir/satellite_fits_poisson.png}
+\caption{Fit of the satellite number density profile using the Poisson log-likelihood method.}
+\end{figure}
+
+\subsubsection{Code for Poisson ln-likelihood fit}
+NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
+\lstinputlisting[language=Python]{\CodeDir/satellites_poisson_code.txt}
+
+\subsection{(1d) Statistical tests}
+
+% change table to include KS score if you implemented it
+\begin{table}[H]
+\centering
+\caption{Statistical tests for the $\chi^2$ and Poisson ln-likelihood fits.}
+\begin{tabular}{|c|c|c|c|}
+\hline
+Method & Dataset & G & Q\\
+\hline
+\input{\CalcDir/statistical_test_table_rows.tex} \\
+\hline
+\end{tabular}
+\end{table}
+
+What can you conclude from the results of the statistical tests?
+
+\subsubsection{Code for statistical tests}
+NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
+\lstinputlisting[language=Python]{\CodeDir/satellites_statistical_tests_code.txt}
+
+\subsection{(1e) \textbf{Bonus} Monte Carlo simulation}
+
+Pick a single dataset. Describe the implementation of your Monte Carlo parametric bootstrap. 
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{\PlotDir/satellite_monte_carlo_chi2.png}
+\caption{Best $\chi^2$-fit profiles using pseudo-experiments. }
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{\PlotDir/satellite_monte_carlo_poisson.png}
+\caption{Best Poisson-likelihood fit profiles using pseudo-experiments. }
+\end{figure}
+
+\subsubsection{Code for Monte Carlo simulation}
+NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
+\lstinputlisting[language=Python]{\CodeDir/satellites_monte_carlo_code.txt}
+
+\end{document}
