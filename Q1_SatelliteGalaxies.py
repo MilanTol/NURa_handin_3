@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 from chi2 import chi2
 from minimizer import Minimizer
+from levenberg_marquadt import levenberg_marquardt
 
 
 def readfile(filename):
@@ -68,7 +69,7 @@ def n(x: np.ndarray, A: float, Nsat: float, a: float, b: float, c: float) -> np.
     return A * Nsat * (x * b_inv) ** (a - 3) * np.exp(-((x * b_inv) ** c))
 
 
-def N(x: np.ndarray, A: float, Nsat: float, a: float, b: float, c: float) -> np.ndarray:
+def satellite_number(x: np.ndarray, A: float, Nsat: float, a: float, b: float, c: float) -> np.ndarray:
     """
     Expected number of satellite galaxies at radius x.
 
@@ -259,7 +260,7 @@ def do_question_1a():
     # x_lower, x_upper = 10**-4, 5
 
     # set N in logspace to make computations faster, use -N since were finding maximum with minimizer.
-    negative_N_logspace = lambda x: -N(np.exp(x), A_1a, Nsat, a, b, c)
+    negative_N_logspace = lambda x: -satellite_number(np.exp(x), A_1a, Nsat, a, b, c)
 
     # Plot N, to inspect the function
     x_logvals = np.geomspace(1e-4, 5, 100)
@@ -281,7 +282,7 @@ def do_question_1a():
         bracket
     )  # find the log value of the x at which maximum of N(x) is attained
     x_max = np.exp(logx_max)  # convert to x_value
-    Nx_max = N(x_max, A_1a, Nsat, a, b, c)
+    Nx_max = satellite_number(x_max, A_1a, Nsat, a, b, c)
 
     # Write the results to text files for later use in the PDF
     with open("Calculations/satellite_max_x.txt", "w") as f:
@@ -292,7 +293,7 @@ def do_question_1a():
 
 def do_question_1b():
     # ======== Question 1b: Fitting N(x) with chi-squared ========
-    datafiles = ["m11", "m12", "m13", "m14", "m15"]
+    datafiles = ["m11", "m12", "m13", "m14", "m15"] # ["m13", "m14", "m15"]
 
     N_sat = []
     min_chi2_values = []
@@ -305,42 +306,93 @@ def do_question_1b():
     for datafile in datafiles:
         radius, nhalo = readfile(f"Data/satgals_{datafile}.txt")
 
-        x_lower, x_upper = (
-            0,
-            5,
-        )
-        bins = 10  # choose appropriate bins
-
+        print(datafile)
         # TODO: implement the fitting of N(x) to the data using chi-squared minimization.
 
-        # Store N_sat, chi2 values and best-fit parameters in their arrays
+        # we compute the average number of satellites for halos in a mass bin
+        # by computing the length of the radius array (which is equal to the number of
+        # satellites) and then dividing by the total number of halos (nhalo).
+        # we store this in the N_sat list
+        N_sat_temp = len(radius)/nhalo
+        N_sat.append(N_sat_temp) 
+        
+        # we now bin the radii found in the data
+        # 
+        nbins = 15  # choose appropriate bins
+        # we choose our bin ranges slightly larger
+        # than how far our data extends, because empty bins
+        # contain information.
+        x_lower, x_upper = (
+            np.min(radius)*0.5,
+            np.max(radius)*2,
+        ) 
+        bins = np.geomspace(x_lower, x_upper, nbins+1)
+        # construct the y_data as the counts in each bin
+        y_data, bin_edges = np.histogram(radius, bins)
+        # to compute the error on the data, we use that number counts in bins is a
+        # Poissonian process, hence the error is given by 1/sqrt(y_data)
+        # however we can't have 0 error, so we take a minimum error of 1:
+        err_data = np.sqrt(np.maximum(y_data, 1))
+        
+        # the x_value at which we got the data should be the center of the bin,
+        # however we have logspace bins. So we instead choose the center in logspace:
+        logspace_centers = 0.5*(np.log10(bins[:-1]) + np.log10(bins[1:]))
+        # then we get the x_values by exponentiating
+        x_data = 10**logspace_centers
+        
+        # the model is given by N, where we also fix Nsat by what we calculated
+        model = lambda x, logA, a, b, c : satellite_number(x=x, A=np.exp(logA), Nsat=N_sat_temp, a=a, b=b, c=c)
+        
+        # use the values from 1a as an initial guess
+        a = 2.4
+        b = 0.4
+        c = 1.6
+        logA = np.log(256 / (5 * np.pi ** (3 / 2)))
+        p_init = np.array((3*logA, a, b, c))
+        
+        # now use levenberg_marquardt to find the optimal fit,
 
-        N_sat.append(0.0)
-        min_chi2_values.append(0.0)
+        p_opt, min_chi2 = levenberg_marquardt(
+            model=model,
+            y_data=y_data, x_data=x_data, err_data=err_data,
+            p_init=p_init, 
+            lmbda_init=1e-3, w=20, maxit=100000,
+            rel_tol=1e-10
+            )
+        
+        min_chi2_values.append(min_chi2)
         best_params_chi2.append(
-            (0.0, 0.0, 0.0)
+            (p_opt[1], p_opt[2], p_opt[3])
         )  # replace by the correct best-fit parameters (a,b,c) found from chi-squared minimization
 
+        ax = axs[datafiles.index(datafile)]
         # Plot the data and the best-fit model for each data file in a subplot.
-        axs[datafiles.index(datafile)].hist(
-            [], bins=bins
+        ax.hist(
+            radius, bins=bins
         )  # plot the histogram of the data
 
         x_plot = np.linspace(
             x_lower, x_upper, 100
         )  # create x_array for plotting the model
-        axs[datafiles.index(datafile)].plot(
-            x_plot, np.ones_like(x_plot)
+        
+        ax.plot(
+            x_plot, model(x_plot, *p_init)
+        )  # plot the initial guess model 
+        
+        ax.plot(
+            x_plot, model(x_plot, *p_opt)
         )  # plot the best-fit model using the best-fit parameters found from chi-squared minimization
 
         # Add labels and title to the subplot
-        axs[datafiles.index(datafile)].set_title(f"Data file: {datafile}")
-        axs[datafiles.index(datafile)].set_xlabel("x = r / r_virial")
-        axs[datafiles.index(datafile)].set_ylabel("Number of satellites")
+        ax.set_title(f"Data file: {datafile}")
+        ax.set_xlabel("x = r / r_virial")
+        ax.set_ylabel("Number of satellites")
 
         # log-log scaling
-        axs[datafiles.index(datafile)].set_xscale("log")
-        axs[datafiles.index(datafile)].set_yscale("log")
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_ylim(1e-1, None)
+        plt.savefig("Plots/satellite_fits_chi2.png")
 
     # Save the figure with all subplots
     plt.tight_layout()
