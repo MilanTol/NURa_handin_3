@@ -88,6 +88,8 @@ cat Q1_SatelliteGalaxies.py > Code/satellites_poisson_code.txt
 cat Q1_SatelliteGalaxies.py > Code/satellites_statistical_tests_code.txt
 cat Q1_SatelliteGalaxies.py > Code/satellites_monte_carlo_code.txt
 
+cat minimizer.py > Code/optimizer.txt
+
 echo "Compiling LaTeX..."
 pdflatex -interaction=batchmode NURA_handin_3.tex
 pdflatex -interaction=batchmode NURA_handin_3.tex &>/dev/null # Run a second time to fix links/references

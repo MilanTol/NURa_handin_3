@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from chi2 import chi2
-from optimizer import Minimizer
+from minimizer import Minimizer
 
 
 def readfile(filename):
@@ -266,16 +266,21 @@ def do_question_1a():
     plt.plot(x_logvals, -negative_N_logspace(np.log(x_logvals)))
     plt.ylabel("N(x)")
     plt.xlabel("x")
+    plt.yscale("log")
     plt.xscale("log")
     plt.savefig("Plots/1a_N(x)")
     plt.close()
 
     # instantiate minimizer object
     minimizer = Minimizer(func=negative_N_logspace)
-    bracket = minimizer.bracket(-4, -3) # find bracket, starting from two x_values close enough to minimum
+    bracket = minimizer.bracket(
+        -4, 1
+    )  # find bracket, starting from two guessed x_values
 
-    logx_max = minimizer.tighten(bracket) # find the log value of the x at which maximum of N(x) is attained
-    x_max = np.exp(logx_max) # convert to x_value
+    logx_max = minimizer.tighten(
+        bracket
+    )  # find the log value of the x at which maximum of N(x) is attained
+    x_max = np.exp(logx_max)  # convert to x_value
     Nx_max = N(x_max, A_1a, Nsat, a, b, c)
 
     # Write the results to text files for later use in the PDF
@@ -301,14 +306,15 @@ def do_question_1b():
         radius, nhalo = readfile(f"Data/satgals_{datafile}.txt")
 
         x_lower, x_upper = (
-            10**-4,
+            0,
             5,
-        )  # replace by appropriate limits for x based on the data
+        )
         bins = 10  # choose appropriate bins
 
         # TODO: implement the fitting of N(x) to the data using chi-squared minimization.
 
         # Store N_sat, chi2 values and best-fit parameters in their arrays
+
         N_sat.append(0.0)
         min_chi2_values.append(0.0)
         best_params_chi2.append(

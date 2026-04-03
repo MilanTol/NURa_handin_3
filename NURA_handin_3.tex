@@ -57,11 +57,40 @@
 
 \subsection{(1a) Maximum of N(x)}
 
-Explain the maximization algorithm used.
+Our goal is to find the radius $x\equiv r/r_\mathrm{vir}$ at which we expect to find the most satellite galaxies.
+This comes down to finding the maximum of
+\begin{equation}
+N(x) = 4\pi x^2 n(x),
+\end{equation}
+where $n(x)$ is the number density of satellite galaxies given by
+\begin{equation}
+n(x) = A \langle N_\mathrm{sat} \rangle 
+\left( \frac{x}{b}\right)^{a-3}
+\exp\left[-\left(\frac{x}{b}\right)^c\right].
+\end{equation}
+First we inspect the function of interest by plotting it over the range $x \in [10^-4, 5]$ (see Fig. \ref{Fig: Satellite_number_plot}).
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{\PlotDir/1a_N(x).png}
+\caption{Expected number of satellites at a given radius x.}
+\label{Fig: Satellite_number_plot}
+\end{figure}
+We see that it has a maximum somewhere in between $x=0.1$ and $x=1$, while not containing any other local maxima. 
+In order to find the maximum, we employ a golden section search that \textbf{minimizes} the negative of the function of interest. 
+Golden section search iteratively tightens a bracket in a self-similar fashion. 
+A bracket is a set of 3 x-values where the middle point attains a lower value than the two edge points.
+This algorithm also requires a bracket as input. 
+Although we could construct our own bracket by inspecting Fig. \ref{Fig: Satellite_number_plot} closer, 
+we instead use a golden ratio bracketing algorithm implemented in the Minimizer class (see code snippet).
+This also speeds up the code in general, as it starts off with a bracket where 
+the ratio of distances between the 3 x-values is the golden ratio.
 
 The maximum of \(N(x)\) is found at:
 $$x_{\text{max}} \approx  \input{\CalcDir/satellite_max_x.txt} $$
 $$N(x_{\text{max}}) \approx  \input{\CalcDir/satellite_max_Nx.txt} $$
+
+\subsubsection{Code for minimizer class}
+\lstinputlisting[language=Python]{\CodeDir/minimizer.txt}
 
 \subsubsection{Code for N(x) maximization}
 NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
