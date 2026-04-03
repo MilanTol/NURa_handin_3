@@ -317,8 +317,8 @@ def do_question_1b():
         N_sat.append(N_sat_temp) 
         
         # we now bin the radii found in the data
-        # 
-        nbins = 15  # choose appropriate bins
+        
+        nbins = 20  # choose appropriate bins
         # we choose our bin ranges slightly larger
         # than how far our data extends, because empty bins
         # contain information.
