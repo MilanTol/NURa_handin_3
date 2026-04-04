@@ -124,7 +124,72 @@ NOTE: all code is reproduced below as an example, show only the relevant lines f
  
 \subsection{(1c) Poisson ln-likelihood fit}
 
-Explain how you determine the Poisson ln-likelihood. Describe the optimization method used. How do your best fit parameters differ from the ones obtained in (1b)? Why?
+Explain how you determine the Poisson ln-likelihood. Describe the optimization method used. 
+How do your best fit parameters differ from the ones obtained in (1b)? Why?
+
+We want to find parameters $p = (a, b, c)$, such that the likelhihood $\mathcal{L}(p)$ is maximized.
+We then bin the data into $N$ bins centered on radii $x_i$, and label the number of 
+satellites in bin $x_i$ as $y_i$. The number of sattelites in each bin are then 
+distributed according to a poisson distribution around some expected number predicted 
+by a true model parametrized by parameters $p$; $\mu(x_i|p)$. 
+So the probability of finding a $y_i$ satellites in bin $x_i$,
+given a model $\mu(x_i|p)$ is given by
+\begin{equation}
+  \frac{
+    \mu(x_i|p)^{y_i}e^{-\mu(x_i|p)}
+  }
+  {
+    y_i!
+  }
+  .
+\end{equation}
+
+We assume that the datapoints of radii are sampled independently. 
+Maximizing the likelihood is equivalent to minimizing the negative log-likehood which is given by:
+\begin{equation}
+  -\ln \mathcal{L}(p)
+  =
+  -\sum_{i=0}^{N-1} 
+  \left[
+    y_i \ln (\mu(x_i|p)) 
+    - \frac{\mu(x_i|p)}
+    - \ln(y_i!)
+  \right].
+\end{equation}
+Writing out the sum this becomes
+\begin{equation}
+  -\ln \mathcal{L}(p)
+  =
+  -\sum_{i=0}^{N-1} 
+    y_i \ln (\mu(x_i|p)) 
+  +
+  \sum_{i=0}^{N-1} 
+    \frac{\mu(x_i|p)}
+  +
+  \sum_{i=0}^{N-1} 
+    \ln(y_i!).
+\end{equation}
+Since our goal is to minimize this function for certain $p$, we can ignore the
+last term since it does not depend on $p$. But also note, that the second term 
+is simply the expected total number of satellites in the data. So if we 
+constrain our model $\mu(x_i|p)$, such that it always satisfies $\sum{i=0}^{N-1} = N_\mathrm{sat}$.
+Then this becomes independent of $p$ as well.
+Then we are left with minimizing the function $g(p)$ given by
+\begin{equation}
+  g(p) \equiv -\sum_{i=0}^{N-1} y_i \ln (\mu(x_i|p)).
+\end{equation}
+
+To avoid any bias in our choice of binning we can take the limit to an infinite number of bins.
+To be more precise, we choose the number of bins so large, such that $y_i \in \{0, 1\}$
+for all bins $x_i$.
+$g(p)$ can then be rewritten to:
+\begin{equation}
+  g(p)
+  =
+  -\sum_{i} \ln (\mu(x_i|p)).
+\end{equation}
+Where $i$ now sums over all the data points and $x_i$ is the value of each data point.
+
 
 \begin{table}[H]
 \centering

@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from chi2 import chi2
 from minimizer import Minimizer
 from levenberg_marquadt import levenberg_marquardt
+from romberg_integrator import romberg_integrator
+from downhill_simplex import downhill_simplex
 
 
 def readfile(filename):
@@ -96,68 +98,9 @@ def satellite_number(x: np.ndarray, A: float, Nsat: float, a: float, b: float, c
     return 4 * np.pi * x * x * n(x, A, Nsat, a, b, c)
 
 
-# Following the lectures, the function below provides a template for a custom minimization method.
-# Depending on your choice of method, you may or may not need to add more function input parameters.
-def my_minimizer(
-    func: callable, x_arr: np.ndarray, bounds: tuple, tol: float = 1e-5
-) -> tuple:
-    """
-    Custom minimization method.
-
-    Parameters
-    ----------
-    func : callable
-        Function to minimize.
-    x_arr : ndarray
-        Array of x values to evaluate func at.
-    bounds : tuple
-        Tuple of (xmin, xmax) to search for minimum in.
-    tol : float, optional
-        Tolerance for the minimization.
-        The default is 1e-5.
-
-    Returns
-    -------
-    x_min : float
-        Value of x at which func is minimum.
-    func_min : float
-        Minimum value of func.
-    """
-
-    # TODO: implement your minimization method here, e.g. by using a golden section search or Brent's method
-
-    return 0.0, 0.0  # replace by the correct return value(s)
-
-
 #### Fitting ####
 
-
-def negative_poisson_ln_likelihood(
-    model: callable, data: np.ndarray, params: tuple
-) -> float:
-    """
-    Calculate the Poisson negative log-likelihood for a given set of parameters and data.
-
-    Parameters
-    ----------
-    model : callable
-        The model function to compare to the data.
-    data : ndarray
-        The observed data to compare the model to.
-    params : tuple
-        The parameters to evaluate the model at.
-
-    Returns
-    -------
-    float
-        The Poisson negative log-likelihood value for the given parameters and data.
-    """
-    # TODO: implement calculation of the Poisson negative log-likelihood (or equivalent) to be minimized
-
-    return 0.0  # replace by the correct value
-
-
-def get_normalization_constant(a: float, b: float, c: float, Nsat: float) -> float:
+def get_normalization_constant(a: float, b: float, c: float, Nsat: float, order:int=5) -> float:
     """
     Calculate the normalization constant A (which is a function of a,b,c) for the satellite number density profile.
 
@@ -171,79 +114,46 @@ def get_normalization_constant(a: float, b: float, c: float, Nsat: float) -> flo
         Steepness of exponential drop-off.
     Nsat : float
         Average number of satellites.
+    order: int
+        Order to use for romberg integrator.
 
     Returns
     -------
     float
         Normalization constant A.
     """
-    # TODO: implement the calculation of the normalization constant
-    return 0.0  # replace by the correct value
+    # integrate in logspace
+    func = lambda x: satellite_number(x=x, A=1, Nsat=Nsat, a=a, b=b, c=c)
+    I = romberg_integrator(func, (0, 5), order=order)
+    return Nsat/I
+ 
 
-
-def minimize_chi2(model: callable, data: np.ndarray, initial_params: tuple) -> tuple:
+def g(a:float, b:float, c:float, data:np.ndarray, normalization_order:int=5) -> float:
     """
-    Minimize the chi-squared value for a given model and data.
+    returns the g_function value (See overleaf document). 
+    A minimum of this function 
+    corresponds to the optimal parametrization a, b, c
+    such that it minimizes the poisson likelihood.
 
-    Parameters
-    ----------
-    model : callable
-        The model function to compare to the data.
-    data : ndarray
-        The observed data to compare the model to.
-    initial_params : tuple
-        Initial guess for the parameters to minimize over.
+    Args:
+        a (float): 
+        b (float):
+        c (float): 
+        data (np.ndarray): 
+            array containing data with the satellite radii
+        normalization_order (int, optional): 
+            Order to use for normalizing the models. Defaults to 5.
 
-    Returns
-    -------
-    best_params : tuple
-        The parameters that minimize the chi-squared value.
-    min_chi2 : float
-        The minimum chi-squared value achieved.
+    Returns:
+        g_value (float): 
     """
-
-    # TODO: implement the minimization of chi2 using your custom method. Remember to normalize for each minimization step
-
-    best_params = initial_params
-    min_chi2 = chi2(
-        model, data, initial_params
-    )  # replace by the correct calculation of chi2 for the given parameters
-
-    return best_params, min_chi2
-
-
-def minimize_poisson_ln_likelihood(
-    model: callable, data: np.ndarray, initial_params: tuple
-) -> tuple:
-    """
-    Minimize the Poisson negative log-likelihood for a given model and data.
-
-    Parameters
-    ----------
-    model : callable
-        The model function to compare to the data.
-    data : ndarray
-        The observed data to compare the model to.
-    initial_params : tuple
-        Initial guess for the parameters to minimize over.
-
-    Returns
-    -------
-    best_params : tuple
-        The parameters that minimize the Poisson negative log-likelihood value.
-    min_ln_likelihood : float
-        The minimum Poisson negative log-likelihood value achieved.
-    """
-
-    # TODO: implement the minimization of the Poisson negative log-likelihood using your custom method. Remember to normalize for each minimization step
-
-    best_params = initial_params
-    min_ln_likelihood = negative_poisson_ln_likelihood(
-        model, data, initial_params
-    )  # replace by the correct calculation of the Poisson negative log-likelihood for the given parameters
-
-    return best_params, min_ln_likelihood
-
+    # normalize the model:
+    # we do this by setting N_sat to 1.
+    A = get_normalization_constant(a, b, c, 1, order=normalization_order) 
+    # Sum up the log terms as described within the overleaf document
+    ln_terms = np.log(satellite_number(data, A, 1, a, b, c))
+    return -np.sum(ln_terms)
+    
 
 # =====================================================
 # ======== Main functions for each subquestion ========
@@ -337,18 +247,24 @@ def do_question_1b():
         # the x_value at which we got the data should be the center of the bin,
         # however we have logspace bins. So we instead choose the center in logspace:
         logspace_centers = 0.5*(np.log10(bins[:-1]) + np.log10(bins[1:]))
+        
         # then we get the x_values by exponentiating
         x_data = 10**logspace_centers
-        
-        # the model is given by N, where we also fix Nsat by what we calculated
-        model = lambda x, logA, a, b, c : satellite_number(x=x, A=np.exp(logA), Nsat=N_sat_temp, a=a, b=b, c=c)
         
         # use the values from 1a as an initial guess
         a = 2.4
         b = 0.4
         c = 1.6
-        logA = np.log(256 / (5 * np.pi ** (3 / 2)))
-        p_init = np.array((5*logA, a, b, c))
+        A = get_normalization_constant(a, b, c, N_sat_temp)
+        print("A:", A)
+        print("Nsat:", N_sat_temp)
+        p_init = np.array((a, b, c))
+        
+        # the model is given by N, where we also fix Nsat by what we calculated
+        # NOTE A and Nsat parameters are DEGENERATE, we must remove this degeneracy
+        # Also note that we bin in logspace: so the values that our model gives is:
+        # \int_x0^x1 N(x)dx = \int_logx0^logx1 N(x)*x dlnx \approx x01 N(x01)
+        model = lambda x, a, b, c : satellite_number(x=x, A=A, Nsat=N_sat_temp, a=a, b=b, c=c)
         
         # now use levenberg_marquardt to find the optimal fit,
 
@@ -356,13 +272,13 @@ def do_question_1b():
             model=model,
             y_data=y_data, x_data=x_data, err_data=err_data,
             p_init=p_init, 
-            lmbda_init=1e-3, w=10, maxit=10000,
-            rel_tol=1e-40
+            lmbda_init=1e-3, w=5, maxit=10000,
+            rel_tol=1e-10
             )
         
         min_chi2_values.append(min_chi2)
         best_params_chi2.append(
-            (p_opt[1], p_opt[2], p_opt[3])
+            p_opt
         )  # replace by the correct best-fit parameters (a,b,c) found from chi-squared minimization
 
         ax = axs[datafiles.index(datafile)]
@@ -422,38 +338,60 @@ def do_question_1c():
 
     for datafile in datafiles:
         radius, nhalo = readfile(f"Data/satgals_{datafile}.txt")
+        nbins = 20  # choose appropriate bins
+        # we choose our bin ranges slightly larger
+        # than how far our data extends, because empty bins
+        # contain information.
         x_lower, x_upper = (
-            10**-4,
-            5,
-        )  # replace by appropriate limits for x based on the data
-
+            np.min(radius)*0.5,
+            np.max(radius)*2,
+        ) 
+        bins = np.geomspace(x_lower, x_upper, nbins+1)
+        
         # TODO: implement fit using Poisson negative log-likelihood minimization.
-
+        
+        func = lambda abc: g(*abc, radius)
+        # instantiate the initial guesses for the parametrizations
+        # note that this combination of initial guess is NOT degenerate
+        x_init = np.array([
+            (a, b, c),
+            (1.5*a, b, c),
+            (a, 1.5*b, c),
+            (a, b, 1.5*c)
+        ])
+        abc_opt = downhill_simplex(func, x_init=x_init)
+        # a_opt, b_opt, c_opt = abc_opt
+        
         # Store poisson llh values and best-fit parameters in their arrays
         min_poisson_llh_values.append(0.0)
         best_params_poisson.append(
-            (0.0, 0.0, 0.0)
+            abc_opt
         )  # replace by the correct best-fit parameters (a,b,c) found from Poisson negative log-likelihood minimization
 
         # Plot the data and the best-fit model for each data file in a subplot.
-        axs[datafiles.index(datafile)].hist(
-            [], bins=10
+        ax = axs[datafiles.index(datafile)]
+        ax.hist(
+            radius, bins=bins
         )  # plot the histogram of the data
+
         x_plot = np.linspace(
             x_lower, x_upper, 100
         )  # create x_array for plotting the model
-        axs[datafiles.index(datafile)].plot(
-            x_plot, np.ones_like(x_plot)
-        )  # plot the best-fit model using the best-fit parameters found from Poisson negative log-likelihood minimization
-
+        
+        # ax.plot(
+        #     x_plot, model(x_plot, *p_init)
+        # )  # plot the initial guess model 
+        
         # Add labels and title to the subplot
-        axs[datafiles.index(datafile)].set_title(f"Data file: {datafile}")
-        axs[datafiles.index(datafile)].set_xlabel("x = r / r_virial")
-        axs[datafiles.index(datafile)].set_ylabel("Number of satellites")
+        ax.set_title(f"Data file: {datafile}")
+        ax.set_xlabel("x = r / r_virial")
+        ax.set_ylabel("Number of satellites")
 
         # log-log scaling
-        axs[datafiles.index(datafile)].set_xscale("log")
-        axs[datafiles.index(datafile)].set_yscale("log")
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        
+        plt.savefig("Plots/satellite_fits_chi2_1c.png")
 
     # Save the figure with all subplots
     plt.tight_layout()
@@ -599,9 +537,8 @@ def do_question_1e():
 
 
 if __name__ == "__main__":
-    do_question_1a()
+    # do_question_1a()
     do_question_1b()
-    exit()
-    do_question_1c()
-    do_question_1d()
-    do_question_1e()
+    # do_question_1c()
+    # do_question_1d()
+    # do_question_1e()
