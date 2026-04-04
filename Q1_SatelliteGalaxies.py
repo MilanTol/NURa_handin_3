@@ -348,7 +348,7 @@ def do_question_1b():
         b = 0.4
         c = 1.6
         logA = np.log(256 / (5 * np.pi ** (3 / 2)))
-        p_init = np.array((3*logA, a, b, c))
+        p_init = np.array((5*logA, a, b, c))
         
         # now use levenberg_marquardt to find the optimal fit,
 
@@ -356,8 +356,8 @@ def do_question_1b():
             model=model,
             y_data=y_data, x_data=x_data, err_data=err_data,
             p_init=p_init, 
-            lmbda_init=1e-3, w=20, maxit=100000,
-            rel_tol=1e-10
+            lmbda_init=1e-3, w=10, maxit=10000,
+            rel_tol=1e-40
             )
         
         min_chi2_values.append(min_chi2)
