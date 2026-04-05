@@ -39,12 +39,12 @@ def downhill_simplex(func:callable, x_init:np.ndarray,
         x_points = x_points[indx] 
 
         # compute the centroid of all points except the worst.
-        centroid = N_inv*np.sum(x_points[:-1]) # exclude the worst point!
+        centroid = N_inv*np.sum(x_points[:-1], axis=0) # exclude the worst point!
 
         # check whether target accuracy is reached:
         accuracy = 2 * np.abs(y_vals[0] - y_vals[-1]) / np.abs(y_vals[0] + y_vals[-1])
         if accuracy < relerr:
-            return x_points
+            return x_points[0]
         
         # propose new point, by flipping mirroring worst point through centroid
         x_new = 2*centroid - x_points[-1]
@@ -83,6 +83,9 @@ def downhill_simplex(func:callable, x_init:np.ndarray,
             else:
                 # shrink all points around the best point so far
                 x_points[1:] = 0.5*(x_points[0] + x_points[1:]) 
+                # update all y_vals
+                for i in range(1, N+1):
+                    y_vals[i] = func(x_points[i])
     
     print("WARNING: Desired tolerance for downhill-simplex not reached")
     
