@@ -99,7 +99,7 @@ def satellite_number(x: np.ndarray, A: float, Nsat: float, a: float, b: float, c
 
 #### Fitting ####
 
-def get_normalization_constant(a: float, b: float, c: float, Nsat:float=1, order:int=5) -> float:
+def get_normalization_constant(a: float, b: float, c: float, order:int=5) -> float:
     """
     Calculate the normalization constant A (which is a function of a,b,c) for the satellite number density profile.
 
@@ -122,18 +122,17 @@ def get_normalization_constant(a: float, b: float, c: float, Nsat:float=1, order
         Normalization constant A.
     """
     # integrate in logspace
-    func = lambda x: satellite_number(x=x, A=1, Nsat=Nsat, a=a, b=b, c=c)
+    func = lambda x: satellite_number(x=x, A=1, Nsat=1, a=a, b=b, c=c)
     I = romberg_integrator(func, (0, 5), order=order)
-    return Nsat/I
+    return 1/I
  
-def levenberg_marquardt(
-    y_data:np.ndarray, x_data:np.ndarray, err_data:np.ndarray, 
+def levenberg_marquardt_satellites(
+    y_data:np.ndarray, x_data:np.ndarray, err_data:np.ndarray, Nsat:int,
     p_init:np.ndarray, lmbda_init:float=1e-3, w=10, maxit:int=1000, rel_tol:float = 1e-4
 )->np.ndarray:  
     """
     levenberg-marquardt algorithm to find parameters that minimize 
-    chi^2 for the given data and model, adjusted to find a, b, c.
-    This algorithm transitions from steepest descent to newtons method.
+    chi^2 for the given data and model, adjusted to find a, b, c for satellites.
 
     Args:
         model (callable): 
@@ -168,7 +167,7 @@ def levenberg_marquardt(
     
     A = get_normalization_constant(*p)
     # the model is given by N, where we also fix Nsat by what we calculated
-    model = lambda x, a, b, c : satellite_number(x=x, A=A, Nsat=1, a=a, b=b, c=c)
+    model = lambda x, a, b, c : satellite_number(x=x, A=A, Nsat=Nsat, a=a, b=b, c=c)
     
     # compute chi
     chi = chi2(model, y_data, x_data, err_data, p)
@@ -192,23 +191,22 @@ def levenberg_marquardt(
             alpha += np.outer(model_gradient, model_gradient) / (err_data[i]*err_data[i])
         
         # add lmbda*(diagonal of alpha), this is what makes it the levenberg algorithm
-        alpha += lmbda * np.diag(np.diag(alpha)) # np.diag(np.diag()) extracts the diagonal as a matrix
+        # np.diag(np.diag()) extracts the diagonal of a matrix
+        alpha += lmbda * np.diag(np.diag(alpha)) 
 
-        # make alpha a matrix and solve alpha@delp = beta:
+        # make alpha a matrix object to solve alpha@delp = beta:
         alpha = Matrix(alpha)
         delp = alpha.solve(beta)
+        
+        # propose a new parametrization of the model
         p_new = p+delp
-
         A_new = get_normalization_constant(*p_new)
-        
-        # the model is given by the normalized satellite_number_probability distr.
-        model_new = lambda x, a, b, c : satellite_number(x, A_new, 1, a=a, b=b, c=c)
-        
-        # compute the chi2 value at the proposed point
+        model_new = lambda x, a, b, c : satellite_number(x, A_new, Nsat=Nsat, a=a, b=b, c=c)
         chi_new = chi2(model_new, y_data, x_data, err_data, p_new)
         
-        # see whether to approve next step
+        # check whether new parametrization is better
         Delta_chi = chi_new - chi
+        
         if Delta_chi < 0: # if new point is better:
             # check termination condition:
             if np.abs(Delta_chi) < rel_tol*chi: # chi - chi_new > 0
@@ -218,11 +216,46 @@ def levenberg_marquardt(
             chi = chi_new
             model = model_new
             lmbda *= w_inv # become more like newton's method
-        else: # if new point is worse: become more like steepest descent
-            lmbda *= w
+            
+        else: # if new point is worse: 
+            lmbda *= w # become more like steepest descent
 
     print("WARNING (levenberg-marquardt): desired tolerance not reached")
     return p, chi_new
+
+
+def log_factorial(x: int):
+    result = 0.0
+    for i in range(2, x + 1):
+        result += np.log(i)
+    return result
+
+
+def negative_poisson_ln_likelihood(
+    model: callable, x_data: np.ndarray, y_data: np.ndarray, params: tuple
+) -> float:
+    """
+    Calculate the Poisson negative log-likelihood for a given set of parameters and data.
+
+    Parameters
+    ----------
+    model : callable
+        The model function to compare to the data.
+    data : ndarray
+        The observed data to compare the model to.
+    params : tuple
+        The parameters to evaluate the model at.
+
+    Returns
+    -------
+    float
+        The Poisson negative log-likelihood value for the given parameters and data.
+    """
+
+    # use map to make a run log_factorial vectorized
+    log_factorial_terms = np.array([log_factorial(y) for y in y_data])
+    terms = y_data*np.log(model(x_data, *params)) - model(x_data, *params) - log_factorial_terms
+    return -np.sum(terms) 
 
 
 def g(a:float, b:float, c:float, data:np.ndarray, normalization_order:int=5) -> float:
@@ -246,7 +279,7 @@ def g(a:float, b:float, c:float, data:np.ndarray, normalization_order:int=5) -> 
     """
     # normalize the model:
     # we do this by setting N_sat to 1.
-    A = get_normalization_constant(a, b, c, 1, order=normalization_order) 
+    A = get_normalization_constant(a, b, c, order=normalization_order) 
     # Sum up the log terms as described within the overleaf document
     ln_terms = np.log(satellite_number(data, A, 1, a, b, c))
     return -np.sum(ln_terms)
@@ -318,74 +351,52 @@ def do_question_1b():
         # by computing the length of the radius array (which is equal to the number of
         # satellites) and then dividing by the total number of halos (nhalo).
         # we store this in the N_sat list
-        N_sat_temp = len(radius)/nhalo
-        len_inv = 1/len(radius)
-        N_sat.append(N_sat_temp) 
+        Nsat = len(radius)/nhalo
+        N_sat.append(Nsat) 
         
         # we now bin the radii found in the data
-        nbins = 20  
         # we choose our bin ranges slightly larger
         # than how far our data extends, because empty bins
         # contain information.
+        nbins = 20  
         x_lower, x_upper = (
             np.min(radius)*0.5,
             np.max(radius)*2,
         ) 
         bins = np.geomspace(x_lower, x_upper, nbins+1)
-        # construct the y_data as the counts in each bin, and normalize it
-        y_data, bin_edges = np.histogram(radius, bins, density=True)
         
+        # construct the y_data as the counts in each bin
+        y_data, bin_edges = np.histogram(radius, bins)
+
         # to compute the error on the data, we use that number counts in bins is a
         # Poissonian process, hence the error is given by 1/sqrt(y_data)
         # however we can't have 0 error, so we take a minimum error of 1:
-        err_data = np.sqrt(np.maximum(y_data, 1)) * len_inv
+        err_data = np.sqrt(np.maximum(y_data, 1))
         
         # the x_value at which we got the data should be the center of the bin,
         # however we have logspace bins. So we instead choose the center in logspace:
         logspace_centers = 0.5*(np.log10(bins[:-1]) + np.log10(bins[1:]))
-        
-        # then we get the x_values by exponentiating
         x_data = 10**logspace_centers
         
-        # use the values from 1a as an initial guess
+        # set the initial guess for abc
         a = 2.4
         b = 0.4
         c = 1.6
         p_init = np.array([a, b, c])
                
-        # now use levenberg_marquardt to find the optimal fit,
-        p_opt, min_chi2 = levenberg_marquardt(
-            y_data=y_data, x_data=x_data, err_data=err_data,
-            p_init=p_init, 
-            lmbda_init=1e-3, w=10, maxit=10000,
-            rel_tol=1e-10
-            )
-                
-        min_chi2_values.append(min_chi2)
-        best_params_chi2.append(
-            p_opt
-        )  # replace by the correct best-fit parameters (a,b,c) found from chi-squared minimization
-
         ax = axs[datafiles.index(datafile)]
         # Plot the data and the best-fit model for each data file in a subplot.
         ax.hist(
-            radius, bins=bins, density=True
+            radius, bins=bins
         )  # plot the histogram of the data
-
         x_plot = np.linspace(
             x_lower, x_upper, 100
         )  # create x_array for plotting the model
+        print(get_normalization_constant(*p_init), Nsat)
+        ax.plot(
+            x_plot, satellite_number(x_plot, get_normalization_constant(*p_init), Nsat, a, b, c)
+        )  # plot the initial_guess model
         
-        a, b, c = p_init
-        ax.plot(
-            x_plot, satellite_number(x_plot, get_normalization_constant(*p_init), 1, a, b, c)
-        )  # plot the best-fit model using the best-fit parameters found from chi-squared minimization
-
-        a, b, c = p_opt
-        ax.plot(
-            x_plot, satellite_number(x_plot, get_normalization_constant(*p_opt), 1, *p_opt)
-        )  # plot the best-fit model using the best-fit parameters found from chi-squared minimization
-
         # Add labels and title to the subplot
         ax.set_title(f"Data file: {datafile}")
         ax.set_xlabel("x = r / r_virial")
@@ -394,8 +405,27 @@ def do_question_1b():
         # log-log scaling
         ax.set_xscale("log")
         ax.set_yscale("log")
-        ax.set_ylim(1e-1, None)
+        # ax.set_ylim(1e-1, None)
         plt.savefig("Plots/satellite_fits_chi2.png")
+        
+        # now use levenberg_marquardt to find the optimal fit,
+        p_opt, min_chi2 = levenberg_marquardt_satellites(
+            y_data=y_data, x_data=x_data, err_data=err_data, Nsat=Nsat,
+            p_init=p_init, 
+            lmbda_init=1e-5, w=10, maxit=10000,
+            rel_tol=1e-10
+            )
+                
+        min_chi2_values.append(min_chi2)
+        best_params_chi2.append(
+            p_opt
+        )  # replace by the correct best-fit parameters (a,b,c) found from chi-squared minimization
+
+        # a_opt, b_opt, c_opt = p_opt
+        ax.plot(
+            x_plot, satellite_number(x_plot, get_normalization_constant(*p_opt), 1, *p_opt)
+        )  # plot the best-fit model using the best-fit parameters found from chi-squared minimization
+
 
     # Save the figure with all subplots
     plt.tight_layout()
@@ -426,7 +456,7 @@ def do_question_1c():
     for datafile in datafiles:
         radius, nhalo = readfile(f"Data/satgals_{datafile}.txt")
         nbins = 20  # choose appropriate bins
-        # we choose our bin ranges slightly larger
+        # we choose our bin ranges larger
         # than how far our data extends, because empty bins
         # contain information.
         x_lower, x_upper = (
@@ -434,13 +464,9 @@ def do_question_1c():
             np.max(radius)*2,
         ) 
         bins = np.geomspace(x_lower, x_upper, nbins+1)
-        
-        # TODO: implement fit using Poisson negative log-likelihood minimization.
-        
+                
         # instantiate the initial guesses for the parametrizations
         # note that this combination of initial guess is NOT degenerate
-        
-        # use the values from 1a as an initial guess
         a = 2.4
         b = 0.4
         c = 1.6
@@ -450,35 +476,46 @@ def do_question_1c():
             (a, 1.5*b, c),
             (a, b, 1.5*c)
         ])
-        ax.plot(
-            x_plot, satellite_number(x_plot, get_normalization_constant(a, b, c), 1, a, b, c)
-        )  # plot the initial guess model 
-        
+                
         # we want to minimize g, using the current data set
         func = lambda abc: g(*abc, radius)
         # find the optimal parameters with downhill_simplex
         p_opt = downhill_simplex(func, x_init=x_init)
         
+        # construct the y_data and x_data with bins
+        y_data, bin_edges = np.histogram(radius, bins)       
+        # the x_value at which we got the data should be the center of the bin,
+        # however we have logspace bins. So we instead choose the center in logspace:
+        logspace_centers = 0.5*(np.log10(bins[:-1]) + np.log10(bins[1:]))
+        # then we get the x_values by exponentiating
+        x_data = 10**logspace_centers
+        
+        # compute the negative log likelihood:
+        Nsat = len(radius)/nhalo
+        model = lambda x: x*satellite_number(x, get_normalization_constant(*p_opt), Nsat, *p_opt)
+        neg_llh = negative_poisson_ln_likelihood(model, x_data, y_data, params=())
+        
         # Store poisson llh values and best-fit parameters in their arrays
-        min_poisson_llh_values.append(0.0)
+        min_poisson_llh_values.append(neg_llh)
         best_params_poisson.append(
             p_opt
-        )  # replace by the correct best-fit parameters (a,b,c) found from Poisson negative log-likelihood minimization
+        ) 
 
-        # Plot the data and the best-fit model for each data file in a subplot.
+        #instantiate plot
         ax = axs[datafiles.index(datafile)]
-        ax.hist(
-            radius, bins=bins, density=True
-        )  # plot the histogram of the data
-
-        x_plot = np.linspace(
+        x_plot = np.linspace( # create x_array for plotting the model
             x_lower, x_upper, 100
-        )  # create x_array for plotting the model
-        
-        a, b, c = p_opt
-        ax.plot(
-            x_plot, satellite_number(x_plot, get_normalization_constant(*p_opt), 1, a, b, c)
-        )  # plot the model that maximizes Poisson likelihood 
+        )  
+        ax.hist( # plot the histogram of the data
+            radius, bins=bins, density=True
+        )  
+        # ax.plot( # plot the initial guess model 
+        #     x_plot, satellite_number(x_plot, get_normalization_constant(a, b, c), 1, a, b, c)
+        # )  
+        a_opt, b_opt, c_opt = p_opt
+        ax.plot( # plot the model that maximizes Poisson likelihood 
+            x_plot, satellite_number(x_plot, get_normalization_constant(*p_opt), 1, a_opt, b_opt, c_opt)
+        )  
         
         # Add labels and title to the subplot
         ax.set_title(f"Data file: {datafile}")
@@ -490,8 +527,6 @@ def do_question_1c():
         ax.set_yscale("log")
         ax.set_ylim(1e-4, None)
         
-        plt.savefig("Plots/satellite_fits_chi2_1c.png")
-
     # Save the figure with all subplots
     plt.tight_layout()
     plt.savefig("Plots/satellite_fits_poisson.png")
@@ -637,7 +672,7 @@ def do_question_1e():
 
 if __name__ == "__main__":
     # do_question_1a()
-    # do_question_1b()
-    do_question_1c()
+    do_question_1b()
+    # do_question_1c()
     # do_question_1d()
     # do_question_1e()
