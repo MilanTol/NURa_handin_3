@@ -32,7 +32,8 @@ def chi2(
     for i in range(len(x_data)):
         model_val = model(x_data[i], *args)
         res += (
-            (y_data[i]-model_val) * (y_data[i]-model_val)
+            (y_data[i] - model_val)
+            * (y_data[i] - model_val)
             / (err_data[i] * err_data[i])
         )
     return res
