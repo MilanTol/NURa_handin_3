@@ -167,7 +167,7 @@ def levenberg_marquardt_satellites(
     
     A = get_normalization_constant(*p)
     # the model is given by N, where we also fix Nsat by what we calculated
-    model = lambda x, a, b, c : x*satellite_number(x=x, A=A, Nsat=Nsat, a=a, b=b, c=c)
+    model = lambda x, a, b, c : satellite_number(x=x, A=A, Nsat=1, a=a, b=b, c=c)
     
     # compute chi
     chi = chi2(model, y_data, x_data, err_data, p)
@@ -178,7 +178,7 @@ def levenberg_marquardt_satellites(
         # create chi function that only depends on model parameters:
         chi_temp = lambda args: chi2(model, y_data, x_data, err_data, args)
         # compute the gradient of chi_temp at p and compute beta
-        beta = -0.5*gradient(chi_temp, p, h=1e-2)
+        beta = -0.5*gradient(chi_temp, p, h=1e-3)
 
         # initialize alpha matrix of size (params, params,):
         alpha = np.zeros( (len(p), len(p),), dtype=float)
@@ -201,7 +201,7 @@ def levenberg_marquardt_satellites(
         # propose a new parametrization of the model
         p_new = p+delp
         A_new = get_normalization_constant(*p_new)
-        model_new = lambda x, a, b, c : x*satellite_number(x, A_new, Nsat=Nsat, a=a, b=b, c=c)
+        model_new = lambda x, a, b, c : satellite_number(x, A_new, Nsat=1, a=a, b=b, c=c)
         chi_new = chi2(model_new, y_data, x_data, err_data, p_new)
             
         # check termination condition:
@@ -367,8 +367,8 @@ def do_question_1b():
         
         # construct the y_data as the counts in each bin
         y_data, bin_edges = np.histogram(radius, bins)
-        y_data = y_data #/ nhalo
-        
+        y_data = y_data / len(radius) # normalize the y_data
+              
         # to compute the error on the data, we use that number counts in bins is a
         # Poissonian process, hence the error is given by 1/sqrt(y_data)
         # however we can't have 0 error, so we take a minimum error of 1:
@@ -387,15 +387,15 @@ def do_question_1b():
                
         ax = axs[datafiles.index(datafile)]
         # Plot the data and the best-fit model for each data file in a subplot.
-        ax.hist(
+        ax.hist(# plot the histogram of the data
             radius, bins=bins, density=True,
-        )  # plot the histogram of the data
-        x_plot = np.linspace(
+        )  
+        x_plot = np.linspace(# create x_array for plotting the model
             x_lower, x_upper, 100
-        )  # create x_array for plotting the model
-        ax.plot(
+        )  
+        ax.plot(# plot the initial_guess model
             x_plot, satellite_number(x_plot, get_normalization_constant(*p_init), 1, *p_init)
-        )  # plot the initial_guess model
+        )  
         
         # Add labels and title to the subplot
         ax.set_title(f"Data file: {datafile}")
