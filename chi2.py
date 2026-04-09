@@ -30,8 +30,9 @@ def chi2(
     # the code implemented for integration doesnt handle arrays well.
     res = 0
     for i in range(len(x_data)):
+        model_val = model(x_data[i], *args)
         res += (
-            (y_data[i]-model(x_data[i], *args)) * (y_data[i]-model(x_data[i], *args))
+            (y_data[i]-model_val) * (y_data[i]-model_val)
             / (err_data[i] * err_data[i])
         )
     return res
