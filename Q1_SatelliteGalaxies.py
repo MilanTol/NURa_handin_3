@@ -191,6 +191,7 @@ def levenberg_marquardt_satellites(
     w_inv = 1/w
 
     for j in range(maxit):
+        err_data = np.sqrt(np.array([model(bins[i], *p) for i in range(len(y_data))]))
         # create chi function that only depends on model parameters:
         chi_temp = lambda args: chi2(model, y_data, bins, err_data, args)
         # compute the gradient of chi_temp at p and compute beta
@@ -204,6 +205,7 @@ def levenberg_marquardt_satellites(
             model_temp = lambda args: model(bins[i], *args)
             # compute the gradient of model_temp at p
             model_gradient = gradient(model_temp, p, h=1e-2)
+            # error is given by model expected value: poissonian
             alpha += np.outer(model_gradient, model_gradient) / (err_data[i]*err_data[i])
         
         # add lmbda*(diagonal of alpha), this is what makes it the levenberg algorithm
