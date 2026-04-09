@@ -2,7 +2,7 @@ import numpy as np
 
 
 def gradient(
-    func:callable, args:np.ndarray, h:float=1e-4, min_stepsize:float=1e-10
+    func:callable, args:np.ndarray, h:float=1e-2, min_stepsize:float=1e-10
 )->np.ndarray:
     """
     Computes partial derivative of func wrt each argument.
