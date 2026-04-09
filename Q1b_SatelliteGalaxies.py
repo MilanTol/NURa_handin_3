@@ -102,7 +102,7 @@ def satellite_number(
 #### Fitting ####
 
 
-def get_normalization_constant(a: float, b: float, c: float, order: int = 5) -> float:
+def get_normalization_constant(a: float, b: float, c: float, order: int = 6) -> float:
     """
     Calculate the normalization constant A (which is a function of a,b,c) for the satellite number density profile.
 
@@ -133,7 +133,7 @@ def get_normalization_constant(a: float, b: float, c: float, order: int = 5) -> 
 def levenberg_marquardt_satellites(
     y_data: np.ndarray,
     bin_edges: np.ndarray,
-    Nsat: int,
+    Nsat: float,
     p_init: np.ndarray,
     lmbda_init: float = 1e-3,
     w=10,
@@ -149,9 +149,11 @@ def levenberg_marquardt_satellites(
         model (callable):
             model of which to find optimal parameters
         y_data (np.ndarray):
-            y_values of data.
-        x_data (np.ndarray):
-            x_values of data.
+            counts in each bin.
+        bins (np.ndarray):
+            x_values of bin_edges.
+        Nsat (float):
+            average number of satellites per halo
         p_init (np.ndarray):
             initial estimate of optimal parameters.
         lmbda_init (float, optional):
@@ -184,7 +186,7 @@ def levenberg_marquardt_satellites(
     p = p_init.copy()
 
     # compute the normalization constant for initial parametrization
-    A = get_normalization_constant(*p, order=7)
+    A = get_normalization_constant(*p, order=6)
 
     # the model expected value in bin i is given by \int_(x_i)^(x_i+1) N(x) dx
     # where x_i, x_i+1 are the lower and upper bounds of bin i.
@@ -192,10 +194,11 @@ def levenberg_marquardt_satellites(
         func = lambda x: satellite_number(x=x, A=A, Nsat=Nsat, a=a, b=b, c=c)
         # integrate the number counts over the bin, set order low for computational speed.
         bounds = (bin_edges[bin], bin_edges[bin + 1])
-        I = romberg_integrator(func, bounds=bounds, order=3)
+        I = romberg_integrator(func, bounds=bounds, order=4)
         return I / bin_widths[bin]
 
     err_data = np.sqrt(np.array([model(bin, *p) for bin in np.arange(len(y_data))]))
+    
     # compute chi
     chi = chi2(model, y_data, bins, err_data, p)
     # precompute 1/w since we will be using this multiple times:
@@ -236,13 +239,13 @@ def levenberg_marquardt_satellites(
 
         # propose a new parametrization of the model
         p_new = p + delp
-        A_new = get_normalization_constant(*p_new, order=7)
+        A_new = get_normalization_constant(*p_new, order=6)
 
         # redefine the model with the new normalization constant.
         def model_new(bin, a, b, c):
             func = lambda x: satellite_number(x=x, A=A_new, Nsat=Nsat, a=a, b=b, c=c)
             # integrate the number counts over the bin, set order for computational speed.
-            I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin + 1]), order=5)
+            I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin + 1]), order=4)
             return I / bin_widths[bin]
 
         err_data_new = np.sqrt(
@@ -292,10 +295,10 @@ def do_question_1b():
         # we choose our bin ranges slightly larger
         # than how far our data extends, because empty bins
         # contain information.
-        nbins = 10
+        nbins = 20
         x_lower, x_upper = (
-            np.min(radius),
-            np.max(radius),
+            np.min(radius)*0.5,
+            np.max(radius)*2,
         )
         bin_edges = np.geomspace(x_lower, x_upper, nbins + 1)
         bin_widths = bin_edges[1:] - bin_edges[:-1]
@@ -305,19 +308,20 @@ def do_question_1b():
         bin_counts = np.histogram(radius, bin_edges)[
             0
         ]  # "mean number of satellites in each radial bin"
+        # we divide by bin_widths so the data height does not depend on choice of bins
         Ntilde_data = bin_counts / (nhalo * bin_widths)  # "per halo"
 
         # we compute the average number of satellites per halo
         # by computing the length of the radius array (which is equal to the number of
         # satellites) and then dividing by the total number of halos (nhalo).
-        Nsat = np.sum(bin_counts) / nhalo
+        Nsat = len(radius) / nhalo
         N_sat.append(Nsat)
 
         # to compute the error on the data, we use that number counts in bins is a
         # Poissonian process, hence the error is given by 1/sqrt(y_data)
         # however we can't have 0 error, so we take a minimum error of 1:
 
-        # set the initial guess for abc
+        # set the initial guess for abc, these starting values seemed to converge well.
         a = 1.5
         b = 0.8
         c = 2.5
@@ -329,50 +333,25 @@ def do_question_1b():
             bin_edges=bin_edges,
             Nsat=Nsat,
             p_init=p_init,
-            lmbda_init=1e-5,
+            lmbda_init=1e-3,
             w=10,
             maxit=1000,
-            rel_tol=1e-5,
-            abs_tol=1e-3,
+            rel_tol=1e-7,
+            abs_tol=1e-5,
         )
 
         min_chi2_values.append(min_chi2)
         best_params_chi2.append(p_opt)
 
         ax = axs[datafiles.index(datafile)]
-        # Plot the data and the best-fit model for each data file in a subplot.
-        # ax.hist(# plot the histogram of the data
-        #     radius, bins=bins, weights=np.ones_like(radius)*Nsat
-        # )
-        ax.stairs(Ntilde_data, edges=bin_edges, label="binned_data")
-
-        # define a function that computes the predicted number of satellites in a bin as
-        # given by the parameters that minimize chi2
-        def model(bin, a, b, c):
-            func = lambda x: satellite_number(
-                x=x,
-                A=get_normalization_constant(a=a, b=b, c=c),
-                Nsat=Nsat,
-                a=a,
-                b=b,
-                c=c,
-            )
-            # integrate the number counts over the bin, set order for computational speed.
-            I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin + 1]), order=5)
-            return I / bin_widths[bin]
-
-        Ntilde_model = [model(bin, *p_opt) for bin in np.arange(nbins)]
-
-        ax.stairs(  # bin the best-fit model using the best-fit parameters found from chi-squared minimization
-            Ntilde_model, bin_edges, label="binned_fit"
-        )
-
+        # plot the data
+        ax.stairs(Ntilde_data, edges=bin_edges, label="data")
         x_plot = np.geomspace(x_lower, x_upper, 100)
         # plot the best-fit model using the best-fit parameters found from chi-squared minimization
         ax.plot(
             x_plot,
             satellite_number(x_plot, get_normalization_constant(*p_opt), Nsat, *p_opt),
-            label="x*N(x)",
+            label="model",
         )
 
         # Add labels and title to the subplot
@@ -383,7 +362,7 @@ def do_question_1b():
         # log-log scaling
         ax.set_xscale("log")
         ax.set_yscale("log")
-        ax.set_ylim(None, None)
+        ax.set_ylim(1e-4, None)
         ax.legend()
 
     # Save the figure with all subplots
