@@ -1,11 +1,10 @@
 import numpy as np
 
 
-def chi2(
+def chi2_poisson_error(
     model: callable,
     y_data: np.ndarray,
     x_data: np.ndarray,
-    err_data: np.ndarray,
     args: np.ndarray = np.array(()),
 ) -> float:
     """
@@ -33,6 +32,6 @@ def chi2(
         model_val = model(x_data[i], *args)
         res += (
             (y_data[i]-model_val) * (y_data[i]-model_val)
-            / (err_data[i] * err_data[i])
+            / (model_val) # the error is given by model_val
         )
     return res
