@@ -174,7 +174,7 @@ def levenberg_marquardt_satellites(
     p = p_init.copy()
     
     # compute the normalization constant for initial parametrization
-    A = get_normalization_constant(*p)  
+    A = get_normalization_constant(*p, order=7)  
     
     # the model expected value in bin i is given by \int_(x_i)^(x_i+1) N(x) dx
     # where x_i, x_i+1 are the lower and upper bounds of bin i. 
@@ -191,7 +191,6 @@ def levenberg_marquardt_satellites(
     w_inv = 1/w
 
     for j in range(maxit):
-        err_data = np.sqrt(np.array([model(bins[i], *p) for i in range(len(y_data))]))
         # create chi function that only depends on model parameters:
         chi_temp = lambda args: chi2(model, y_data, bins, err_data, args)
         # compute the gradient of chi_temp at p and compute beta
@@ -204,7 +203,7 @@ def levenberg_marquardt_satellites(
             # create model function that only depends on model parameters:
             model_temp = lambda args: model(bins[i], *args)
             # compute the gradient of model_temp at p
-            model_gradient = gradient(model_temp, p, h=1e-2)
+            model_gradient = gradient(model_temp, p, h=1e-3)
             # error is given by model expected value: poissonian
             alpha += np.outer(model_gradient, model_gradient) / (err_data[i]*err_data[i])
         
@@ -218,7 +217,7 @@ def levenberg_marquardt_satellites(
         
         # propose a new parametrization of the model
         p_new = p+delp
-        A_new = get_normalization_constant(*p_new)
+        A_new = get_normalization_constant(*p_new, order=7)
         # redefine the model with the new normalization constant.
         def model_new(bin, a, b, c):
             func = lambda x: satellite_number(x=x, A=A_new, Nsat=Nsat, a=a, b=b, c=c)
@@ -380,7 +379,7 @@ def do_question_1b():
         # we choose our bin ranges slightly larger
         # than how far our data extends, because empty bins
         # contain information.
-        nbins = 20
+        nbins = 10
         x_lower, x_upper = (
             np.min(radius),
             np.max(radius),
@@ -412,7 +411,7 @@ def do_question_1b():
             y_data=Ntilde_data, bin_edges=bin_edges, err_data=Ntilde_err, Nsat=Nsat,
             p_init=p_init, 
             lmbda_init=1e-5, w=10, maxit=1000,
-            rel_tol=1e-8, abs_tol=1e-5
+            rel_tol=1e-5, abs_tol=1e-3
             )
                 
         min_chi2_values.append(min_chi2)
