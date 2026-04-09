@@ -46,12 +46,6 @@
 \begin{document}
 \maketitle
 
-\textit{Write a short description of your solution in each section. Explain your choices. Explicitly draw conclusions from your results.}
-
-\textit{You can refer to selected lines of code where you think it is necessary. However, you must provide the full code relevant to each (sub)question below it.}
-
-\textit{Don't forget to describe your figures and mention what conclusions you draw from them!}
-
 
 \section{Satellite galaxies around a massive central}
 
@@ -75,7 +69,8 @@ First we inspect the function of interest by plotting it over the range $x \in [
 \caption{Expected number of satellites at a given radius x.}
 \label{Fig: Satellite_number_plot}
 \end{figure}
-We see that it has a maximum somewhere in between $x=0.1$ and $x=1$, while not containing any other local maxima. 
+We see that the function lives in logspace, so we will search the minimum in logspace as well.
+We also note that it has a maximum somewhere in between $x=0.1$ and $x=1$, while not containing any other local maxima. 
 In order to find the maximum, we employ a golden section search that \textbf{minimizes} the negative of the function of interest. 
 Golden section search iteratively tightens a bracket in a self-similar fashion. 
 A bracket is a set of 3 x-values where the middle point attains a lower value than the two edge points.
@@ -93,12 +88,17 @@ $$N(x_{\text{max}}) \approx  \input{\CalcDir/satellite_max_Nx.txt} $$
 \lstinputlisting[language=Python]{\CodeDir/minimizer.txt}
 
 \subsubsection{Code for N(x) maximization}
-NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
 \lstinputlisting[language=Python]{\CodeDir/satellites_maximize_code.txt}
 
 \subsection{(1b) $\chi^2$-fit}
 
 Argue the choices of your binning. Explain the minimization routine used. Bonus points for a correctly implemented derivative-based routine.
+
+As we already saw in question a, the function of interest lives in logspace. Hence we bin the data logarithmically.
+We choose 20 bins, as this does not leave too many bins empty, 
+while still capturing the cutoff feature at large radius of the profile properly.
+
+
 
 \begin{table}[H]
 \centering
@@ -119,7 +119,6 @@ Dataset & $N_{\mathrm{sat}}$ & $\chi^2$ & $a$ & $b$ & $c$ \\
 \end{figure}
 
 \subsubsection{Code for $\chi^2$-fit}
-NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
 \lstinputlisting[language=Python]{\CodeDir/satellites_chi2_code.txt}
  
 \subsection{(1c) Poisson ln-likelihood fit}

@@ -73,7 +73,7 @@ def do_question_1a():
     # x_lower, x_upper = 10**-4, 5
 
     # set N in logspace to make computations faster, use -N since were finding maximum with minimizer.
-    negative_N_logspace = lambda x: -satellite_number(np.exp(x), A_1a, Nsat, a, b, c)
+    negative_N_logspace = lambda logx: -satellite_number(np.exp(logx), A_1a, Nsat, a, b, c)
 
     # Plot N, to inspect the function
     x_logvals = np.geomspace(1e-4, 5, 100)

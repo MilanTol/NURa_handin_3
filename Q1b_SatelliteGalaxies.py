@@ -385,7 +385,6 @@ def do_question_1b():
         ax.set_yscale("log")
         ax.set_ylim(None, None)
         ax.legend()
-        plt.savefig("Plots/satellite_fits_chi2.png")
 
     # Save the figure with all subplots
     plt.tight_layout()
