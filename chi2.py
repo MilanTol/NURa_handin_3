@@ -27,8 +27,6 @@ def chi2(
         float: chi^2 value
     """
     return np.sum(
-        (y_data - model(x_data, *args))
-        * (y_data - model(x_data, *args))
-        / err_data
-        * err_data
+        ((y_data - model(x_data, *args)) * (y_data - model(x_data, *args)))
+        / (err_data * err_data)
     )
