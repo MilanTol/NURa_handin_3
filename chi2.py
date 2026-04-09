@@ -26,9 +26,12 @@ def chi2(
     Returns:
         float: chi^2 value
     """
-    return np.sum(
-        (y_data - model(x_data, *args))
-        * (y_data - model(x_data, *args))
-        / err_data
-        * err_data
-    )
+    # we compute this with a for loop since were using integration in our code
+    # the code implemented for integration doesnt handle arrays well.
+    res = 0
+    for i in range(len(x_data)):
+        res += (
+            (y_data[i]-model(x_data[i], *args)) * (y_data[i]-model(x_data[i], *args))
+            / (err_data[i] * err_data[i])
+        )
+    return res

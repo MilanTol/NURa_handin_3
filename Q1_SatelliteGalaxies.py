@@ -127,7 +127,7 @@ def get_normalization_constant(a: float, b: float, c: float, order:int=5) -> flo
     return 1/I
  
 def levenberg_marquardt_satellites(
-    y_data:np.ndarray, x_data:np.ndarray, err_data:np.ndarray, Nsat:int,
+    y_data:np.ndarray, bin_edges:np.ndarray, err_data:np.ndarray, Nsat:int,
     p_init:np.ndarray, lmbda_init:float=1e-3, w=10, maxit:int=1000, rel_tol:float = 1e-4
 )->np.ndarray:  
     """
@@ -161,31 +161,43 @@ def levenberg_marquardt_satellites(
         min_Chi2 (int):
             minimum value of Chi2 found.
     """
-
+    
+    # create the bins array, which simply labels each bin
+    bins = np.array(range(0, len(bin_edges)-1)) # note this has len(bin_edges)-1 elements
+    print(len(bins))
+    print(len(bin_edges))
     lmbda = lmbda_init
     p = p_init.copy()
     
-    A = get_normalization_constant(*p)
-    # the model is given by N, where we also fix Nsat by what we calculated
-    model = lambda x, a, b, c : satellite_number(x=x, A=A, Nsat=1, a=a, b=b, c=c)
+    # compute the normalization constant for initial parametrization
+    A = get_normalization_constant(*p)  
+    
+    # the model expected value in bin i is given by \int_(x_i)^(x_i+1) N(x) dx
+    # where x_i, x_i+1 are the lower and upper bounds of bin i. 
+    def model(bin, a, b, c):
+        func = lambda x: satellite_number(x=x, A=A, Nsat=1, a=a, b=b, c=c)
+        # integrate the number counts over the bin, set order low for computational speed.
+        bounds = (bin_edges[bin], bin_edges[bin+1])
+        I = romberg_integrator(func, bounds=bounds, order=3)
+        return 
     
     # compute chi
-    chi = chi2(model, y_data, x_data, err_data, p)
+    chi = chi2(model, y_data, bins, err_data, p)
     # precompute 1/w since we will be using this multiple times:
     w_inv = 1/w
 
     for j in range(maxit):
         # create chi function that only depends on model parameters:
-        chi_temp = lambda args: chi2(model, y_data, x_data, err_data, args)
+        chi_temp = lambda args: chi2(model, y_data, bins, err_data, args)
         # compute the gradient of chi_temp at p and compute beta
         beta = -0.5*gradient(chi_temp, p, h=1e-3)
 
         # initialize alpha matrix of size (params, params,):
         alpha = np.zeros( (len(p), len(p),), dtype=float)
         # loop over data points:
-        for i in range(len(x_data)):
+        for i in range(len(bins)):
             # create model function that only depends on model parameters:
-            model_temp = lambda args: model(x_data[i], *args)
+            model_temp = lambda args: model(bins[i], *args)
             # compute the gradient of model_temp at p
             model_gradient = gradient(model_temp, p, h=1e-2)
             alpha += np.outer(model_gradient, model_gradient) / (err_data[i]*err_data[i])
@@ -201,8 +213,13 @@ def levenberg_marquardt_satellites(
         # propose a new parametrization of the model
         p_new = p+delp
         A_new = get_normalization_constant(*p_new)
-        model_new = lambda x, a, b, c : satellite_number(x, A_new, Nsat=1, a=a, b=b, c=c)
-        chi_new = chi2(model_new, y_data, x_data, err_data, p_new)
+        # redefine the model with the new normalization constant.
+        def model_new(bin, a, b, c):
+            func = lambda x: satellite_number(x=x, A=A_new, Nsat=1, a=a, b=b, c=c)
+            # integrate the number counts over the bin, set order low for computational speed.
+            I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin+1]), order=3)
+            return 
+        chi_new = chi2(model_new, y_data, bins, err_data, p_new)
             
         # check termination condition:
         Delta_chi = chi_new - chi
@@ -347,10 +364,9 @@ def do_question_1b():
         radius, nhalo = readfile(f"Data/satgals_{datafile}.txt")
 
         print("computing:", datafile)
-        # we compute the average number of satellites for halos in a mass bin
+        # we compute the average number of satellites per halo
         # by computing the length of the radius array (which is equal to the number of
         # satellites) and then dividing by the total number of halos (nhalo).
-        # we store this in the N_sat list
         Nsat = len(radius)/nhalo
         N_sat.append(Nsat) 
         
@@ -365,19 +381,15 @@ def do_question_1b():
         ) 
         bins = np.geomspace(x_lower, x_upper, nbins+1)
         
-        # construct the y_data as the counts in each bin
-        y_data, bin_edges = np.histogram(radius, bins)
-        y_data = y_data / len(radius) # normalize the y_data
+        # construct the y_data as:
+        # mean number of satellites per halo in each radial bin, Ni
+        y_data, bin_edges = np.histogram(radius, bins) # "mean number of satellites in each radial bin"
+        y_data = y_data / nhalo # "per halo"
               
         # to compute the error on the data, we use that number counts in bins is a
         # Poissonian process, hence the error is given by 1/sqrt(y_data)
         # however we can't have 0 error, so we take a minimum error of 1:
         err_data = np.sqrt(np.maximum(y_data, 1))
-        
-        # the x_value at which we got the data should be the center of the bin,
-        # however we have logspace bins. So we instead choose the center in logspace:
-        logspace_centers = 0.5*(np.log10(bins[:-1]) + np.log10(bins[1:]))
-        x_data = 10**logspace_centers
         
         # set the initial guess for abc
         a = 2.4
@@ -410,7 +422,7 @@ def do_question_1b():
         
         # now use levenberg_marquardt to find the optimal fit,
         p_opt, min_chi2 = levenberg_marquardt_satellites(
-            y_data=y_data, x_data=x_data, err_data=err_data, Nsat=1,
+            y_data=y_data, bin_edges=bin_edges, err_data=err_data, Nsat=1,
             p_init=p_init, 
             lmbda_init=1e-8, w=10, maxit=10000,
             rel_tol=1e-10
