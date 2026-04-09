@@ -310,6 +310,19 @@ def g(a:float, b:float, c:float, data:np.ndarray, normalization_order:int=5) -> 
     ln_terms = np.log(satellite_number(data, A, 1, a, b, c))
     return -np.sum(ln_terms)
     
+def Gtest(y_data:np.ndarray, y_model:np.ndarray)->float:
+    """
+    returns Gtest estimate of data and model
+
+    Args:
+        y_data (np.ndarray): _array containing data
+        y_model (np.ndarray): array containing model expected values
+
+    Returns:
+        float: Gtest
+    """
+    return 2*np.sum(y_data*np.log(y_data/y_model))
+
 
 # =====================================================
 # ======== Main functions for each subquestion ========
@@ -357,14 +370,15 @@ def do_question_1a():
         f.write(f"{Nx_max:.6f}")
 
 
+best_params_chi2 = []
+
 def do_question_1b():
     # ======== Question 1b: Fitting N(x) with chi-squared ========
     datafiles = ["m11", "m12", "m13", "m14", "m15"] # ["m13", "m14", "m15"]
 
     N_sat = []
     min_chi2_values = []
-    best_params_chi2 = []
-
+    
     # initialize figure with 5 subplots on 3x2 grid for the 5 data files
     fig, axs = plt.subplots(3, 2, figsize=(6.4, 8.0))
     axs = axs.flatten()
@@ -437,7 +451,7 @@ def do_question_1b():
             func = lambda x: satellite_number(x=x, A=get_normalization_constant(a=a, b=b, c=c), Nsat=Nsat, a=a, b=b, c=c)
             # integrate the number counts over the bin, set order for computational speed.
             I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin+1]), order=5)
-            return I
+            return I/bin_widths[bin]
         Ntilde_model = [model(bin, *p_opt) for bin in np.arange(nbins)]
         
         ax.stairs( # bin the best-fit model using the best-fit parameters found from chi-squared minimization
@@ -448,7 +462,7 @@ def do_question_1b():
         
         x_plot = np.geomspace(x_lower, x_upper, 100)
         # plot the best-fit model using the best-fit parameters found from chi-squared minimization
-        ax.plot(x_plot, x_plot*satellite_number(x_plot, A=get_normalization_constant(*p_opt), Nsat=Nsat, a=a, b=b, c=c), 
+        ax.plot(x_plot, satellite_number(x_plot, get_normalization_constant(*p_opt), Nsat, *p_opt), 
                 label='x*N(x)')
         
 
@@ -478,13 +492,12 @@ def do_question_1b():
                 f"m{idx+11} & {N_sat_temp:.5f} & {chi2_val:.5f} & {a:.5f} & {b:.5f} & {c:.5f}{line_end}\n"
             )
 
-
+best_params_poisson = []
 def do_question_1c():
     # ======== Question 1c: Fitting N(x) with Poisson ln-likelihood ========
     datafiles = ["m11", "m12", "m13", "m14", "m15"]
 
     min_poisson_llh_values = []
-    best_params_poisson = []
 
     # initialize figure with 5 subplots on 3x2 grid for the 5 data files
     fig, axs = plt.subplots(3, 2, figsize=(6.4, 8.0))
@@ -593,15 +606,45 @@ def do_question_1d():
         radius, nhalo = readfile(f"Data/satgals_{datafile}.txt")
 
         # Use best-fit parameters from previous steps
-        best_params_chi2 = (0.0, 0.0, 0.0)  # replace by the correct array
-        best_params_poisson = (0.0, 0.0, 0.0)  # replace by the correct array
+        p_chi2 = best_params_chi2[datafiles.index(datafile)]  
+        p_poisson = best_params_poisson[datafiles.index(datafile)]  
 
-        # TODO: implement the statistical tests to calculate G and Q scores for both chi2 and poisson fits, and store the results in their respective arrays
+        # construct bins
+        nbins = 10
+        x_lower, x_upper = (
+            np.min(radius),
+            np.max(radius),
+        ) 
+        bin_edges = np.geomspace(x_lower, x_upper, nbins+1)
+        bin_widths = bin_edges[1:] - bin_edges[:-1]
+        
+        # compute the binned data
+        bin_counts = np.histogram(radius, bin_edges)[0] # "mean number of satellites in each radial bin"
+        data = bin_counts / (nhalo * bin_widths)
+        Nsat = np.sum(bin_counts) / nhalo
 
+        # generate expected data from chi2 fit:
+        def model(bin, a, b, c):
+            func = lambda x: satellite_number(x=x, A=get_normalization_constant(a=a, b=b, c=c), Nsat=Nsat, a=a, b=b, c=c)
+            # integrate the number counts over the bin, set order for computational speed.
+            I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin+1]), order=5)
+            return I/bin_widths[bin]
+        chi2_data = [model(bin, *p_chi2) for bin in np.arange(nbins)]
+        G_score_chi2 = Gtest(data, chi2_data)
+        
+        # generate expected data from poisson fit:
+        def model(bin, a, b, c):
+            func = lambda x: satellite_number(x=x, A=get_normalization_constant(a=a, b=b, c=c), Nsat=Nsat, a=a, b=b, c=c)
+            # integrate the number counts over the bin, set order for computational speed.
+            I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin+1]), order=5)
+            return I/bin_widths[bin]
+        chi2_data = [model(bin, *p_poisson) for bin in np.arange(nbins)]
+        G_score_poisson = Gtest(data, chi2_data)
+        
         # Append the G and Q scores for chi2 and poisson fits to their respective arrays
-        G_scores_chi2.append(0.0)
+        G_scores_chi2.append(G_score_chi2)
         Q_scores_chi2.append(0.0)
-        G_scores_poisson.append(0.0)
+        G_scores_poisson.append(G_score_poisson)
         Q_scores_poisson.append(0.0)
 
     # Save G and Q scores for chi2 and poisson fits to tex files for later use in the PDF
@@ -710,6 +753,6 @@ def do_question_1e():
 if __name__ == "__main__":
     # do_question_1a()
     do_question_1b()
-    # do_question_1c()
-    # do_question_1d()
+    do_question_1c()
+    do_question_1d()
     # do_question_1e()
