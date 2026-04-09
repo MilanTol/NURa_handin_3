@@ -167,7 +167,8 @@ def levenberg_marquardt_satellites(
     
     # create the bins array, which simply labels each bin
     bins = np.array(range(0, len(bin_edges)-1)) # note this has len(bin_edges)-1 elements
-    
+    bin_widths = bin_edges[1:] - bin_edges[:-1]
+
     lmbda = lmbda_init
     p = p_init.copy()
     
@@ -181,7 +182,7 @@ def levenberg_marquardt_satellites(
         # integrate the number counts over the bin, set order low for computational speed.
         bounds = (bin_edges[bin], bin_edges[bin+1])
         I = romberg_integrator(func, bounds=bounds, order=3)
-        return I
+        return I/bin_widths[bin]
     
     err_data = np.sqrt(np.array([model(bin, *p) for bin in np.arange(len(y_data))]))
     # compute chi
@@ -193,7 +194,7 @@ def levenberg_marquardt_satellites(
         # create chi function that only depends on model parameters:
         chi_temp = lambda args: chi2(model, y_data, bins, err_data, args)
         # compute the gradient of chi_temp at p and compute beta
-        beta = -0.5*gradient(chi_temp, p, h=1e-3)
+        beta = -0.5*gradient(chi_temp, p, h=1e-2)
 
         # initialize alpha matrix of size (params, params,):
         alpha = np.zeros( (len(p), len(p),), dtype=float)
@@ -202,7 +203,7 @@ def levenberg_marquardt_satellites(
             # create model function that only depends on model parameters:
             model_temp = lambda args: model(bins[i], *args)
             # compute the gradient of model_temp at p
-            model_gradient = gradient(model_temp, p, h=1e-3)
+            model_gradient = gradient(model_temp, p, h=1e-2)
             # error is given by model expected value: poissonian
             alpha += np.outer(model_gradient, model_gradient) / (err_data[i]*err_data[i])
         
@@ -223,7 +224,7 @@ def levenberg_marquardt_satellites(
             func = lambda x: satellite_number(x=x, A=A_new, Nsat=Nsat, a=a, b=b, c=c)
             # integrate the number counts over the bin, set order for computational speed.
             I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin+1]), order=5)
-            return I
+            return I/bin_widths[bin]
         
         err_data_new = np.sqrt(np.array([model_new(bin, *p_new) for bin in np.arange(len(y_data))]))
         chi_new = chi2(model_new, y_data, bins, err_data_new, p_new)
@@ -372,11 +373,6 @@ def do_question_1b():
         radius, nhalo = readfile(f"Data/satgals_{datafile}.txt")
 
         print("computing:", datafile)
-        # we compute the average number of satellites per halo
-        # by computing the length of the radius array (which is equal to the number of
-        # satellites) and then dividing by the total number of halos (nhalo).
-        Nsat = len(radius)/nhalo
-        N_sat.append(Nsat) 
         
         # we now bin the radii found in the data
         # we choose our bin ranges slightly larger
@@ -389,15 +385,18 @@ def do_question_1b():
         ) 
         bin_edges = np.geomspace(x_lower, x_upper, nbins+1)
         bin_widths = bin_edges[1:] - bin_edges[:-1]
-        logbin_centers = 0.5*(np.log10(bin_edges[1:]) +np.log10(bin_edges[:-1])) 
-        bin_centers = 10**logbin_centers
         
         # construct the y_data as:
         # mean number of satellites per halo in each radial bin, Ni
         bin_counts = np.histogram(radius, bin_edges)[0] # "mean number of satellites in each radial bin"
+        Ntilde_data = bin_counts / (nhalo * bin_widths) # "per halo"
+
+        # we compute the average number of satellites per halo
+        # by computing the length of the radius array (which is equal to the number of
+        # satellites) and then dividing by the total number of halos (nhalo).
         Nsat = np.sum(bin_counts) / nhalo
-        Ntilde_data = bin_counts / nhalo # "per halo"
-              
+        N_sat.append(Nsat) 
+
         # to compute the error on the data, we use that number counts in bins is a
         # Poissonian process, hence the error is given by 1/sqrt(y_data)
         # however we can't have 0 error, so we take a minimum error of 1:
