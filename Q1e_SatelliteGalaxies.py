@@ -822,8 +822,8 @@ def do_question_1e():
 
 
 if __name__ == "__main__":
-    do_question_1a()
-    do_question_1b()
-    do_question_1c()
-    do_question_1d()
+    # do_question_1a()
+    # do_question_1b()
+    # do_question_1c()
+    # do_question_1d()
     do_question_1e()
