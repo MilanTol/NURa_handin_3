@@ -120,22 +120,32 @@ because empty bins also contain information.
 
 We further process the data by normalizing the counts in each bin by the number of halos
 and the width of each bin. 
-This last step is crucial to ensure that the general height of the data is not dependent on the choice of bins.
+This last step ensures that the general height of the data is not dependent on the choice of bins,
+which is especially important when using logspace bins.
 We compute the average number of satellites per halo by dividing the number of satellites and by the number of halos.
 
 To find the parameters $a,b,c$ that minimize $\chi^2$, we employ the downhill simplex algorithm.
+This algorithm stores 4 points in parameter space and sorts these based on the $\chi^2$ value attained.
 For each iteration, the algorithm proposes a new set of parameters $p_\mathrm{new} = (a, b, c)$.
+If the new proposed parameters are better than the worst, it replaces it. In case,
+the proposed set of parameters is the best set of parameters so far, it explores further in that direction.
+When the algorithm starts getting closer to the actual minimum, it shrinks the 4 points to 
+explore the minimum with greater precision.
+We set quite a low tolerance for terminating the algorithm, to prevent termination 
+in saddles. 
+
 To ensure that we compare each set of parameters properly, we recompute the normalization factor $A$ at every iteration
 such that the expected number of satellites for each halo equals the average number of satellites per halo found 
-in the data. 
+in the data.  
 This normalization requires integrating the model over the range of radii over which we binned the data.
 We perform this integration with the romberg integration algorithm which uses an open method to handle the 
-potentially undefined behaviour at x=0 for values of $a< -2$ which our algorithm might explore. 
+potentially undefined behaviour at x=0 for values of $a< 1$ which our algorithm might explore. 
+Despite the longer computation time, we choose a high level of precision for this normalization, 
+so that our minimization algorithm is not biased.
+
 We use the poissonic nature of the data to determine the errors on the bin counts:
 For each iteration the error son the bin counts are given by the square root of 
 the expected count as given by the parametrized model. 
-We set quite a low tolerance for terminating the algorithm, to prevent termination 
-in saddles. 
 
 \begin{table}[H]
 \centering
@@ -149,6 +159,8 @@ Dataset & $N_{\mathrm{sat}}$ & $\chi^2$ & $a$ & $b$ & $c$ \\
 \end{tabular}
 \end{table}
 
+We see that the fits are reasonably accurate. 
+
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{\PlotDir/satellite_fits_chi2.png}
@@ -157,6 +169,9 @@ Dataset & $N_{\mathrm{sat}}$ & $\chi^2$ & $a$ & $b$ & $c$ \\
 
 \subsubsection{Code for romberg integration}
 \lstinputlisting[language=Python]{\CodeDir/romberg_integrator.txt}
+
+\subsubsection{Code for sorter class}
+\lstinputlisting[language=Python]{\CodeDir/sorter.txt}
 
 \subsubsection{Code for downhill simplex algorithm}
 \lstinputlisting[language=Python]{\CodeDir/downhill_simplex.txt}
