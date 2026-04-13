@@ -329,6 +329,23 @@ accurately capture the way the data is generated.
 We pick the 4th dataset, as this one does not contain too many satellites, 
 hence sampling the same number of satellites is not as computationally expensive. 
 
+We use rejection sampling to generate 30 sets of pseudo-data from the models
+parametrized by $a, b, c$ found in parts b and c. To speed up the sampling 
+process ever so slightly, we use the routine from part a to compute the maxima $N_\mathrm{max}$
+of the probability distributions for radii of satellites for these parametrizations.
+We then sample the 2d surface spanned by $x\in [0, 5]$ and $y \in [0, 1.01 N_\mathrm{max}]. $
+We sample an ever slightly larger range in y to account for error in the estimate of $N_\mathrm{max}$.
+This effects the sampling efficiently only at the percent level.
+
+We perform the same minimization routines on the pseudo data as discussed in sections b and c
+and plot the pseudo-fits in grey. We also plot the mean of the pseudo parametrizations in orange 
+and compare it to the original best fit parametrizations. 
+We see that for the Poisson approach the pseudo-mean overlaps with the original fit and the spread 
+in pseudo-fits is not large. Meanwhile, the $chi^2$ pseudo-mean is significantly greater at 
+small radii compared to the original fit. Also the spread in pseudo-fits is a lot larger. 
+
+This is once again a confirmation that the data is not generated with gaussian noise, so 
+employing a $chi^2$ minimization routine leads to biased results.
 
 \begin{figure}[H]
 \centering
