@@ -139,6 +139,12 @@ Dataset & $N_{\mathrm{sat}}$ & $\chi^2$ & $a$ & $b$ & $c$ \\
 \caption{Fit of the satellite number density profile using the chi-squared method.}
 \end{figure}
 
+\subsubsection{Code for romberg integration}
+\lstinputlisting[language=Python]{\CodeDir/romberg_integrator.txt}
+
+\subsubsection{Code for downhill simplex algorithm}
+\lstinputlisting[language=Python]{\CodeDir/downhill_simplex.txt}
+
 \subsubsection{Code for $\chi^2$-fit}
 \lstinputlisting[language=Python]{\CodeDir/satellites_chi2_code.txt}
  
@@ -270,8 +276,13 @@ Pick a single dataset. Describe the implementation of your Monte Carlo parametri
 \caption{Best Poisson-likelihood fit profiles using pseudo-experiments. }
 \end{figure}
 
+\subsubsection{Code for random number generator}
+\lstinputlisting[language=Python]{\CodeDir/rng.txt}
+
+\subsubsection{Code for distribution class, which contains the rejection sampler}
+\lstinputlisting[language=Python]{\CodeDir/distribution.txt}
+
 \subsubsection{Code for Monte Carlo simulation}
-NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
 \lstinputlisting[language=Python]{\CodeDir/satellites_monte_carlo_code.txt}
 
 \end{document}

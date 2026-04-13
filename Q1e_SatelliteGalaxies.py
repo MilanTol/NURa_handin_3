@@ -2,7 +2,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from chi2 import chi2
 from romberg_integrator import romberg_integrator
 from distribution import Distribution
 from downhill_simplex import downhill_simplex

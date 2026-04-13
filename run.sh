@@ -85,14 +85,21 @@ python3 Q1d_SatelliteGalaxies.py
 python3 Q1e_SatelliteGalaxies.py
 
 # Copy the code to a text file which will be shown in the PDF
-# ADAPT THIS, or in the tex load in only certain lines from these files relevant to the (sub)question!
 cat Q1a_SatelliteGalaxies.py > Code/satellites_maximize_code.txt
-cat Q1b_SatelliteGalaxies.py > Code/satellites_chi2_code.txt
-cat Q1c_SatelliteGalaxies.py > Code/satellites_poisson_code.txt
-cat Q1d_SatelliteGalaxies.py > Code/satellites_statistical_tests_code.txt
-cat Q1e_SatelliteGalaxies.py > Code/satellites_monte_carlo_code.txt
-
 cat minimizer.py > Code/minimizer.txt
+
+cat Q1b_SatelliteGalaxies.py > Code/satellites_chi2_code.txt
+cat romberg_integrator.py > Code/romberg_integrator.txt
+cat downhill_simplex.py > Code/downhill_simplex.txt
+
+cat Q1c_SatelliteGalaxies.py > Code/satellites_poisson_code.txt
+
+cat Q1d_SatelliteGalaxies.py > Code/satellites_statistical_tests_code.txt
+
+cat Q1e_SatelliteGalaxies.py > Code/satellites_monte_carlo_code.txt
+cat rng.py > Code/rng.txt
+cat distribution.py > Code/distribution.txt
+
 
 echo "Compiling LaTeX..."
 pdflatex -interaction=batchmode NURA_handin_3.tex
