@@ -318,7 +318,7 @@ def do_question_1b():
             0
         ]  # "mean number of satellites in each radial bin"
         # we divide by bin_widths so the data height does not depend on choice of bins
-        Ntilde_data = bin_counts / (nhalo)  # "per halo"
+        Ntilde_data = bin_counts / (nhalo * bin_widths)  # "per halo"
 
         # we compute the average number of satellites per halo
         # by computing the length of the radius array (which is equal to the number of
