@@ -218,7 +218,7 @@ Maximizing the likelihood is equivalent to minimizing the negative log-likehood 
   -\sum_{i=0}^{N-1} 
   \left[
     y_i \ln (\mu(x_i|p)) 
-    - \frac{\mu(x_i|p)}
+    - \mu(x_i|p)
     - \ln(y_i!)
   \right].
 \end{equation}
@@ -230,7 +230,7 @@ Writing out the sum this becomes
     y_i \ln (\mu(x_i|p)) 
   +
   \sum_{i=0}^{N-1} 
-    \frac{\mu(x_i|p)}
+   \mu(x_i|p)
   +
   \sum_{i=0}^{N-1} 
     \ln(y_i!).
