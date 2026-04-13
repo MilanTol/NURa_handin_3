@@ -90,6 +90,7 @@ cat minimizer.py > Code/minimizer.txt
 
 cat Q1b_SatelliteGalaxies.py > Code/satellites_chi2_code.txt
 cat romberg_integrator.py > Code/romberg_integrator.txt
+cat sorter.py > Code/sorter.txt
 cat downhill_simplex.py > Code/downhill_simplex.txt
 
 cat Q1c_SatelliteGalaxies.py > Code/satellites_poisson_code.txt
