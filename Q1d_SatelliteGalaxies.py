@@ -139,7 +139,9 @@ def Gtest(y_data: np.ndarray, y_model: np.ndarray) -> float:
     Returns:
         float: Gtest
     """
-    return 2 * np.sum(y_data * np.log(y_data / y_model))
+    return 2 * np.sum(
+        y_data * np.log(np.maximum(y_data, 1) / y_model)
+    )  # avoid y_data = 0 undefined behaviour
 
 
 def Qscore(k: int, x: float) -> float:
@@ -205,20 +207,20 @@ def do_question_1d():
             0
         ]  # "mean number of satellites in each radial bin"
         data = bin_counts
-        Nsat = np.sum(bin_counts)
+        Nsat_total = np.sum(bin_counts)
 
         # define the model
         def model(bin, a, b, c):
             func = lambda x: satellite_number(
                 x=x,
-                A=get_normalization_constant(a=a, b=b, c=c, order=7),
-                Nsat=Nsat,
+                A=get_normalization_constant(a=a, b=b, c=c, order=10),
+                Nsat=Nsat_total,
                 a=a,
                 b=b,
                 c=c,
             )
             # integrate the number counts over the bin, set order for computational speed.
-            I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin + 1]), order=5)
+            I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin + 1]), order=7)
             return I
 
         # G-test requires that sum_i O_i = sum_i E_i:
