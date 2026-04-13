@@ -159,7 +159,11 @@ Dataset & $N_{\mathrm{sat}}$ & $\chi^2$ & $a$ & $b$ & $c$ \\
 \end{tabular}
 \end{table}
 
-We see that the fits are reasonably accurate. 
+We see that the fits are reasonably accurate. Suprisingly the $chi^2$ values grow monotonically when 
+looking at heavier halos. I am not entirely sure why this is, but a possible explanation is that
+there are less and less actual data points, since there are less
+satellites in total. In turnthe $chi^2$ distribution is less and less 
+accurate, so a high value of $chi^2$ does not directly imply a bad fit.
 
 \begin{figure}[H]
 \centering
@@ -252,10 +256,19 @@ $g(p)$ can then be rewritten to:
 \end{equation}
 Where $i$ now sums over all the data points and $x_i$ is the value of each data point.
 
+maximizing the likelihood is now equivalent to minimimizing $g$. We employ a
+downhill simplex algorithm, to find the parameters that minimize $g$. An overview of this 
+algorithm has already been given in part b. 
+
+We see that the fits are again reasonably accurate, but they do differ from the fits found using 
+the $chi^2$ routine. In particular we see that the at smaller radii, the $chi^2$ routine adjusts its 
+slope more severely for the bumps, leading to a flatter slope overall. This makes sense, 
+as a Gaussian distribution has a lot less probablity when sampling far above the mean, compared 
+to a Poisson distribution with a low mean.
 
 \begin{table}[H]
 \centering
-\caption{Best-fit parameters for $\chi^2$ fits.}
+\caption{Best-fit parameters for Poisson fits.}
 \begin{tabular}{|c|c|c|c|c|}
 \hline
 Dataset  & llh & $a$ & $b$ & $c$ \\
@@ -293,7 +306,14 @@ Method & Dataset & G & Q\\
 \end{tabular}
 \end{table}
 
-What can you conclude from the results of the statistical tests?
+We see that the Q-test favors the Poisson fit for all data except the final data set.
+In particular, the Q-test rejects the $chi^2$ fits altogether for the first 4 data sets,
+as it returns values $<0.01$. This is expected, since we know that the data is generated 
+Poissonically: we are counting the number of satellites found in a certain radial bin. 
+We conclude that the $chi^2$ approach does not accurately capture the nature of the data
+and leads to biased fits. Meanwhile the Poisson fitting does an excellent job, since 
+for all data sets it return Q-values $>0.1$, which is an indication that it does 
+accurately capture the way the data is generated.
 
 \subsubsection{Code for statistical tests}
 \lstinputlisting[language=Python]{\CodeDir/satellites_statistical_tests_code.txt}
@@ -306,7 +326,9 @@ What can you conclude from the results of the statistical tests?
 
 \subsection{(1e) \textbf{Bonus} Monte Carlo simulation}
 
-Pick a single dataset. Describe the implementation of your Monte Carlo parametric bootstrap. 
+We pick the 4th dataset, as this one does not contain too many satellites, 
+hence sampling the same number of satellites is not as computationally expensive. 
+
 
 \begin{figure}[H]
 \centering
