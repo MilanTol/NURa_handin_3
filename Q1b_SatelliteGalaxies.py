@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 
 from chi2 import chi2
 from romberg_integrator import romberg_integrator
-from gradient import gradient
-from matrix import Matrix
+from downhill_simplex import downhill_simplex
 
 
 def readfile(filename):
@@ -130,161 +129,6 @@ def get_normalization_constant(a: float, b: float, c: float, order: int = 6) -> 
     return 1 / I
 
 
-def levenberg_marquardt_satellites(
-    y_data: np.ndarray,
-    bin_edges: np.ndarray,
-    Nsat: float,
-    p_init: np.ndarray,
-    lmbda_init: float = 1e-3,
-    w=10,
-    maxit: int = 1000,
-    rel_tol: float = 1e-4,
-    abs_tol: float = 1e-4,
-) -> np.ndarray:
-    """
-    levenberg-marquardt algorithm to find parameters that minimize
-    chi^2 for the given data and model, adjusted to find a, b, c for satellites.
-
-    Args:
-        model (callable):
-            model of which to find optimal parameters
-        y_data (np.ndarray):
-            counts in each bin.
-        bins (np.ndarray):
-            x_values of bin_edges.
-        Nsat (float):
-            average number of satellites per halo
-        p_init (np.ndarray):
-            initial estimate of optimal parameters.
-        lmbda_init (float, optional):
-            initial lambda_value, sets the step value for updates. Defaults to 1e-3.
-        w (int, optional):
-            sets how quickly lmbda updates. Defaults to 10.
-        maxit (int, optional):
-            maximum iterations the algorithm may take. Defaults to 1000.
-        reltol (float, optional):
-            relative tolerance (if chi_new - chi < reltol*chi algorithm terminates).
-            Defaults to 1e-8.
-        abstol (float, optional):
-            absolute tolerance  (if chi_new - chi < abstol algorithm terminates).
-            Defaults to 1e-4.
-
-    Returns:
-        p (np.ndarray):
-            array containing optimal parameters.
-        min_Chi2 (int):
-            minimum value of Chi2 found.
-    """
-
-    # create the bins array, which simply labels each bin
-    bins = np.array(
-        range(0, len(bin_edges) - 1)
-    )  # note this has len(bin_edges)-1 elements
-    bin_widths = bin_edges[1:] - bin_edges[:-1]
-
-    lmbda = lmbda_init
-    p = p_init.copy()
-
-    # the model expected value in bin i is given by \int_(x_i)^(x_i+1) N(x) dx
-    # where x_i, x_i+1 are the lower and upper bounds of bin i.
-    
-    def model(bin, a, b, c):
-        # always recompute the normalization constant when trying new parameters
-        A_temp = get_normalization_constant(a, b, c)
-        
-        func = lambda x: satellite_number(x=x, A=A_temp, Nsat=Nsat, a=a, b=b, c=c)
-        
-        # integrate the number counts over the bin, set order low for computational speed.
-        bounds = (bin_edges[bin], bin_edges[bin + 1])
-        I = romberg_integrator(func, bounds=bounds, order=4)
-        
-        return I / bin_widths[bin]
-
-    err_data = np.sqrt(np.array([model(bin, *p) for bin in np.arange(len(y_data))]))
-
-    # compute chi
-    chi = chi2(model, y_data, bins, err_data, p)
-    # precompute 1/w since we will be using this multiple times:
-    w_inv = 1 / w
-
-    for j in range(maxit):
-        # create chi function that only depends on model parameters:
-        chi_temp = lambda args: chi2(model, y_data, bins, err_data, args)
-            
-        # compute the gradient of chi_temp at p and compute beta
-        beta = -0.5 * gradient(chi_temp, p, h=1e-2)
-
-        # initialize alpha matrix of size (params, params,):
-        alpha = np.zeros(
-            (
-                len(p),
-                len(p),
-            ),
-            dtype=float,
-        )
-        # loop over data points:
-        for i in range(len(bins)):
-            # create model function that only depends on model parameters:
-            model_temp = lambda args: model(bins[i], *args)
-            # compute the gradient of model_temp at p
-            model_gradient = gradient(model_temp, p, h=1e-2)
-            # error is given by model expected value: poissonian
-            alpha += np.outer(model_gradient, model_gradient) / (
-                err_data[i] * err_data[i]
-            )
-
-        # add lmbda*(diagonal of alpha), this is what makes it the levenberg algorithm
-        # np.diag(np.diag()) extracts the diagonal of a matrix
-        alpha += lmbda * np.diag(np.diag(alpha))
-
-        # make alpha a matrix object to solve alpha@delp = beta:
-        alpha = Matrix(alpha)
-        delp = alpha.solve(beta)
-
-        # propose a new parametrization of the model
-        p_new = p + delp
-
-        # redefine the model with the new normalization constant.
-        def model_new(bin, a, b, c):
-            
-            # always recompute normalization constant
-            A_temp = get_normalization_constant(a,b,c, order=7)
-            
-            func = lambda x: satellite_number(x=x, A=A_temp, Nsat=Nsat, a=a, b=b, c=c)
-            
-            # integrate the number counts over the bin, set order for computational speed.
-            I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin + 1]), order=4)
-            
-            return I / bin_widths[bin]
-
-        err_data_new = np.sqrt(
-            np.array([model_new(bin, *p_new) for bin in np.arange(len(y_data))])
-        )
-        chi_new = chi2(model_new, y_data, bins, err_data_new, p_new)
-
-        # check termination condition:
-        Delta_chi = chi_new - chi
-        if (
-            np.abs(Delta_chi) < rel_tol * chi or np.abs(Delta_chi) < abs_tol
-        ):  # chi - chi_new > 0
-            return p + delp, chi_new
-
-        # check whether new parametrization is better
-        if Delta_chi < 0:  # if new point is better:
-            # otherwise update step
-            p += delp
-            chi = chi_new
-            model = model_new
-            err_data_new = err_data
-            lmbda *= w_inv  # become more like newton's method
-
-        else:  # if new point is worse:
-            lmbda *= w  # become more like steepest descent
-
-    print("WARNING (levenberg-marquardt): desired tolerance not reached")
-    return p, chi
-
-
 def do_question_1b():
     # ======== Question 1b: Fitting N(x) with chi-squared ========
     datafiles = ["m11", "m12", "m13", "m14", "m15"]  # ["m13", "m14", "m15"]
@@ -304,10 +148,10 @@ def do_question_1b():
         # we choose our bin ranges slightly larger
         # than how far our data extends, because empty bins
         # contain information.
-        nbins = 20
+        nbins = 10
         x_lower, x_upper = (
-            np.min(radius) * 0.5,
-            np.max(radius) * 2,
+            np.min(radius),
+            np.max(radius),
         )
         bin_edges = np.geomspace(x_lower, x_upper, nbins + 1)
         bin_widths = bin_edges[1:] - bin_edges[:-1]
@@ -330,26 +174,44 @@ def do_question_1b():
         # Poissonian process, hence the error is given by 1/sqrt(y_data)
         # however we can't have 0 error, so we take a minimum error of 1:
 
-        # set the initial guess for abc, these starting values seemed to converge well.
-        a = 1.5
-        b = 0.8
-        c = 2.5
-        p_init = np.array([a, b, c])
-
-        # now use levenberg_marquardt to find the optimal fit,
-        p_opt, min_chi2 = levenberg_marquardt_satellites(
-            y_data=Ntilde_data,
-            bin_edges=bin_edges,
-            Nsat=Nsat,
-            p_init=p_init,
-            lmbda_init=1e-3,
-            w=10,
-            maxit=1000,
-            rel_tol=1e-7,
-            abs_tol=1e-5,
+        # instantiate the initial guesses for the parametrizations
+        # note that this combination of initial guess is NOT degenerate
+        a = 2.4
+        b = 0.4
+        c = 1.6
+        x_init = np.array(
+            [(a, b, c), (1.5 * a, b, c), (a, 1.5 * b, c), (a, b, 1.5 * c)]
         )
-
-        min_chi2_values.append(min_chi2)
+       
+        def chi2_temp(abc):           
+            # always recompute the normalization constant when trying new parameters
+            A_temp = get_normalization_constant(*abc, order=10)
+            
+            def model(bin):
+                func = lambda x: satellite_number(x, A_temp, Nsat, *abc)
+                # integrate the number counts over the bin, set order low for computational speed.
+                bounds = (bin_edges[bin], bin_edges[bin + 1])
+                I = romberg_integrator(func, bounds=bounds, order=7)
+                return I / bin_widths[bin]
+            
+            Ntilde_model = np.array([
+                model(bin) for bin in np.arange(nbins)
+            ])
+            err_data = np.sqrt(Ntilde_model) # poissonian property
+        
+            return np.sum(
+                (Ntilde_data - Ntilde_model)*(Ntilde_data - Ntilde_model)
+                /
+                (err_data*err_data)
+                )
+        
+        # use downhill simplex to find parametrization that 
+        # minimizes chi2   
+        p_opt = downhill_simplex(chi2_temp, x_init=x_init)
+        
+        # store the best smallest chi2 value found and the 
+        # corresponding parametrization
+        min_chi2_values.append(chi2_temp(p_opt))
         best_params_chi2.append(p_opt)
 
         ax = axs[datafiles.index(datafile)]
@@ -371,7 +233,7 @@ def do_question_1b():
         # log-log scaling
         ax.set_xscale("log")
         ax.set_yscale("log")
-        ax.set_ylim(1e-4, None)
+        ax.set_ylim(0.5*np.min(Ntilde_data), 2*np.max(Ntilde_data))
         ax.legend()
 
     # Save the figure with all subplots
