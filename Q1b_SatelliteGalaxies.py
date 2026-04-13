@@ -185,16 +185,19 @@ def levenberg_marquardt_satellites(
     lmbda = lmbda_init
     p = p_init.copy()
 
-    # compute the normalization constant for initial parametrization
-    A = get_normalization_constant(*p, order=6)
-
     # the model expected value in bin i is given by \int_(x_i)^(x_i+1) N(x) dx
     # where x_i, x_i+1 are the lower and upper bounds of bin i.
+    
     def model(bin, a, b, c):
-        func = lambda x: satellite_number(x=x, A=A, Nsat=Nsat, a=a, b=b, c=c)
+        # always recompute the normalization constant when trying new parameters
+        A_temp = get_normalization_constant(a, b, c)
+        
+        func = lambda x: satellite_number(x=x, A=A_temp, Nsat=Nsat, a=a, b=b, c=c)
+        
         # integrate the number counts over the bin, set order low for computational speed.
         bounds = (bin_edges[bin], bin_edges[bin + 1])
         I = romberg_integrator(func, bounds=bounds, order=4)
+        
         return I / bin_widths[bin]
 
     err_data = np.sqrt(np.array([model(bin, *p) for bin in np.arange(len(y_data))]))
@@ -207,6 +210,7 @@ def levenberg_marquardt_satellites(
     for j in range(maxit):
         # create chi function that only depends on model parameters:
         chi_temp = lambda args: chi2(model, y_data, bins, err_data, args)
+            
         # compute the gradient of chi_temp at p and compute beta
         beta = -0.5 * gradient(chi_temp, p, h=1e-2)
 
@@ -239,13 +243,18 @@ def levenberg_marquardt_satellites(
 
         # propose a new parametrization of the model
         p_new = p + delp
-        A_new = get_normalization_constant(*p_new, order=6)
 
         # redefine the model with the new normalization constant.
         def model_new(bin, a, b, c):
-            func = lambda x: satellite_number(x=x, A=A_new, Nsat=Nsat, a=a, b=b, c=c)
+            
+            # always recompute normalization constant
+            A_temp = get_normalization_constant(a,b,c, order=7)
+            
+            func = lambda x: satellite_number(x=x, A=A_temp, Nsat=Nsat, a=a, b=b, c=c)
+            
             # integrate the number counts over the bin, set order for computational speed.
             I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin + 1]), order=4)
+            
             return I / bin_widths[bin]
 
         err_data_new = np.sqrt(
@@ -273,7 +282,7 @@ def levenberg_marquardt_satellites(
             lmbda *= w  # become more like steepest descent
 
     print("WARNING (levenberg-marquardt): desired tolerance not reached")
-    return p, chi_new
+    return p, chi
 
 
 def do_question_1b():
@@ -309,7 +318,7 @@ def do_question_1b():
             0
         ]  # "mean number of satellites in each radial bin"
         # we divide by bin_widths so the data height does not depend on choice of bins
-        Ntilde_data = bin_counts / (nhalo * bin_widths)  # "per halo"
+        Ntilde_data = bin_counts / (nhalo)  # "per halo"
 
         # we compute the average number of satellites per halo
         # by computing the length of the radius array (which is equal to the number of
