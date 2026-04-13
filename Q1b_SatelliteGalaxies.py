@@ -198,7 +198,7 @@ def levenberg_marquardt_satellites(
         return I / bin_widths[bin]
 
     err_data = np.sqrt(np.array([model(bin, *p) for bin in np.arange(len(y_data))]))
-    
+
     # compute chi
     chi = chi2(model, y_data, bins, err_data, p)
     # precompute 1/w since we will be using this multiple times:
@@ -297,8 +297,8 @@ def do_question_1b():
         # contain information.
         nbins = 20
         x_lower, x_upper = (
-            np.min(radius)*0.5,
-            np.max(radius)*2,
+            np.min(radius) * 0.5,
+            np.max(radius) * 2,
         )
         bin_edges = np.geomspace(x_lower, x_upper, nbins + 1)
         bin_widths = bin_edges[1:] - bin_edges[:-1]
