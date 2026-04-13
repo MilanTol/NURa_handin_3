@@ -49,6 +49,12 @@
 
 \section{Satellite galaxies around a massive central}
 
+
+
+
+
+
+
 \subsection{(1a) Maximum of N(x)}
 
 Our goal is to find the radius $x\equiv r/r_\mathrm{vir}$ at which we expect to find the most satellite galaxies.
@@ -60,9 +66,10 @@ where $n(x)$ is the number density of satellite galaxies given by
 \begin{equation}
 n(x) = A \langle N_\mathrm{sat} \rangle 
 \left( \frac{x}{b}\right)^{a-3}
-\exp\left[-\left(\frac{x}{b}\right)^c\right].
+\exp\left[-\left(\frac{x}{b}\right)^c\right],
 \end{equation}
-First we inspect the function of interest by plotting it over the range $x \in [10^-4, 5]$ (see Fig. \ref{Fig: Satellite_number_plot}).
+with $a=2.4$, $b=0.25$, and $c=1.6$.
+First we inspect the function of interest by plotting it over the range $x \in [10^{-4}, 5]$ (see Fig. \ref{Fig: Satellite_number_plot}).
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{\PlotDir/1a_N(x).png}
@@ -79,6 +86,9 @@ Although we could construct our own bracket by inspecting Fig. \ref{Fig: Satelli
 we instead use a golden ratio bracketing algorithm implemented in the Minimizer class (see code snippet).
 This also speeds up the code in general, as it starts off with a bracket where 
 the ratio of distances between the 3 x-values is the golden ratio.
+We employ this algorithm as it is stable, and since calling the function 
+is not too computationally intensive, the extra calls the algorithm requires does not 
+cost a lot more computation time.
 
 The maximum of \(N(x)\) is found at:
 $$x_{\text{max}} \approx  \input{\CalcDir/satellite_max_x.txt} $$
@@ -89,6 +99,12 @@ $$N(x_{\text{max}}) \approx  \input{\CalcDir/satellite_max_Nx.txt} $$
 
 \subsubsection{Code for N(x) maximization}
 \lstinputlisting[language=Python]{\CodeDir/satellites_maximize_code.txt}
+
+
+
+
+
+
 
 \subsection{(1b) $\chi^2$-fit}
 
@@ -148,6 +164,11 @@ Dataset & $N_{\mathrm{sat}}$ & $\chi^2$ & $a$ & $b$ & $c$ \\
 \subsubsection{Code for $\chi^2$-fit}
 \lstinputlisting[language=Python]{\CodeDir/satellites_chi2_code.txt}
  
+
+
+
+
+
 \subsection{(1c) Poisson ln-likelihood fit}
 
 Explain how you determine the Poisson ln-likelihood. Describe the optimization method used. 
@@ -236,8 +257,11 @@ Dataset  & llh & $a$ & $b$ & $c$ \\
 \end{figure}
 
 \subsubsection{Code for Poisson ln-likelihood fit}
-NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
 \lstinputlisting[language=Python]{\CodeDir/satellites_poisson_code.txt}
+
+
+
+
 
 \subsection{(1d) Statistical tests}
 
@@ -257,8 +281,13 @@ Method & Dataset & G & Q\\
 What can you conclude from the results of the statistical tests?
 
 \subsubsection{Code for statistical tests}
-NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
 \lstinputlisting[language=Python]{\CodeDir/satellites_statistical_tests_code.txt}
+
+
+
+
+
+
 
 \subsection{(1e) \textbf{Bonus} Monte Carlo simulation}
 

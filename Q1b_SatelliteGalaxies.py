@@ -147,10 +147,10 @@ def do_question_1b():
         # we choose our bin ranges slightly larger
         # than how far our data extends, because empty bins
         # contain information.
-        nbins = 10
+        nbins = 20
         x_lower, x_upper = (
-            np.min(radius),
-            np.max(radius),
+            0.5 * np.min(radius),
+            2 * np.max(radius),
         )
         bin_edges = np.geomspace(x_lower, x_upper, nbins + 1)
         bin_widths = bin_edges[1:] - bin_edges[:-1]
@@ -230,7 +230,7 @@ def do_question_1b():
         # log-log scaling
         ax.set_xscale("log")
         ax.set_yscale("log")
-        ax.set_ylim(0.5 * np.min(Ntilde_data), 2 * np.max(Ntilde_data))
+        ax.set_ylim(1e-4, None)
         ax.legend()
 
     # Save the figure with all subplots

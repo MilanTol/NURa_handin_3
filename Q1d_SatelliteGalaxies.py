@@ -193,13 +193,12 @@ def do_question_1d():
         p_poisson = best_params_poisson[datafiles.index(datafile)]
 
         # construct bins
-        nbins = 10
+        nbins = 20
         x_lower, x_upper = (
-            np.min(radius),
-            np.max(radius),
+            0.5 * np.min(radius),
+            2 * np.max(radius),
         )
         bin_edges = np.geomspace(x_lower, x_upper, nbins + 1)
-        bin_widths = bin_edges[1:] - bin_edges[:-1]
 
         # compute the binned data
         bin_counts = np.histogram(radius, bin_edges)[
