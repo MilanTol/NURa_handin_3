@@ -286,7 +286,7 @@ def do_question_1c():
         # log-log scaling
         ax.set_xscale("log")
         ax.set_yscale("log")
-        ax.set_ylim(np.min(Ntilde_data), np.max(Ntilde_data))
+        ax.set_ylim(0.5*np.min(Ntilde_data), 2*np.max(Ntilde_data))
         ax.legend()
 
     # Save the figure with all subplots

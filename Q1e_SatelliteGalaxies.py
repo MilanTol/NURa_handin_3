@@ -327,13 +327,17 @@ def do_question_1e():
     # chi2 plot
     x_plot = np.linspace(np.min(pseudo_radius_chi2), np.max(pseudo_radius_chi2), 100)  # create x_array for plotting the model
     plt.figure(figsize=(6.4, 4.8))
+    i = 0
     for params in pseudo_chi2_params:
         plt.plot(
             x_plot,
             satellite_number(
                 x_plot, get_normalization_constant(*params), Nsat, *params
-            ),
+            ), alpha=0.1, color='black', 
+            label="Pseudo-dataset fits" if i == 0 else None  # only label once
+
         )  # plot the best-fit model for each pseudo-dataset using the best-fit parameters found from chi-squared minimization
+        i += 1
 
     plt.plot(
         x_plot,
@@ -341,8 +345,10 @@ def do_question_1e():
             x_plot,
             get_normalization_constant(*best_params_chi2),
             Nsat,
-            *best_params_chi2,
+            *best_params_chi2,  
+            
         ),
+        label="Original fit"
     )  # plot the original best-fit model using the best-fit parameters found from chi-squared minimization on the real data
 
     mean_params_chi2 = np.mean(
@@ -355,7 +361,8 @@ def do_question_1e():
             get_normalization_constant(*mean_params_chi2),
             Nsat,
             *mean_params_chi2,
-        ),
+        ), 
+        label = "Mean of pseudo fits"
     )  # plot the mean of the best-fit models from the pseudo-datasets
 
     plt.title(f"Monte Carlo simulations - chi2 fit - Data file: {datafiles[index]}")
@@ -363,19 +370,24 @@ def do_question_1e():
     plt.ylabel("Number of satellites")
     plt.xscale("log")
     plt.yscale("log")
-    plt.legend(["Pseudo-dataset fits", "Original fit", "Mean of pseudo fits"])
+    plt.legend()
     plt.savefig("Plots/satellite_monte_carlo_chi2.png")
 
     # poisson plot
     x_plot = np.linspace(np.min(pseudo_radius_poisson), np.max(pseudo_radius_poisson), 100)  # create x_array for plotting the model
     plt.figure(figsize=(6.4, 4.8))
+    
+    i = 0
     for params in pseudo_poisson_params:
         plt.plot(
             x_plot,
             satellite_number(
                 x_plot, get_normalization_constant(*params), Nsat, *params
-            ),
+            ), alpha=0.1, color='black',
+            label="Pseudo-dataset fits" if i == 0 else None # only label once
         )  # plot the best-fit model for each pseudo-dataset using the best-fit parameters found from Poisson negative log-likelihood minimization
+        i += 1
+        
     plt.plot(
         x_plot,
         satellite_number(
@@ -384,6 +396,7 @@ def do_question_1e():
             Nsat,
             *best_params_poisson,
         ),
+        label="Original fit"
     )  # plot the original best-fit model using the best-fit parameters found from Poisson negative log-likelihood minimization on the real data
 
     mean_params_poisson = np.mean(
@@ -397,6 +410,7 @@ def do_question_1e():
             Nsat,
             *mean_params_poisson,
         ),
+        label = "Mean of pseudo fits"
     )  # plot the mean of the best-fit models from the pseudo-datasets
 
     plt.title(f"Monte Carlo simulations - Poisson fit - Data file: {datafiles[index]}")
@@ -404,7 +418,7 @@ def do_question_1e():
     plt.ylabel("Number of satellites")
     plt.xscale("log")
     plt.yscale("log")
-    plt.legend(["Pseudo-dataset fits", "Original fit", "Mean of pseudo fits"])
+    plt.legend()
     plt.savefig("Plots/satellite_monte_carlo_poisson.png")
 
 
