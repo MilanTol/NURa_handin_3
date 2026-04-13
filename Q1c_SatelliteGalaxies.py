@@ -275,7 +275,7 @@ def do_question_1c():
         ax.plot(  # plot the model that maximizes Poisson likelihood
             x_plot,
             satellite_number(x_plot, get_normalization_constant(*p_opt), Nsat, *p_opt),
-            label='model'
+            label="model",
         )
 
         # Add labels and title to the subplot

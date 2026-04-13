@@ -249,7 +249,6 @@ def do_question_1d():
         #   N is the number of data points: amount of bins
         #   M is the number of independent parameters: 3
         k = nbins - 3
-        print("k:", k)
 
         # we compute the Qscores by inputting Gscores:
         Q_score_chi2 = Qscore(k, G_score_chi2)
