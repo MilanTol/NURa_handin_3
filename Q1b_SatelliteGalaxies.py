@@ -182,34 +182,32 @@ def do_question_1b():
         x_init = np.array(
             [(a, b, c), (1.5 * a, b, c), (a, 1.5 * b, c), (a, b, 1.5 * c)]
         )
-       
-        def chi2_temp(abc):           
+
+        def chi2_temp(abc):
             # always recompute the normalization constant when trying new parameters
             A_temp = get_normalization_constant(*abc, order=10)
-            
+
             def model(bin):
                 func = lambda x: satellite_number(x, A_temp, Nsat, *abc)
                 # integrate the number counts over the bin, set order low for computational speed.
                 bounds = (bin_edges[bin], bin_edges[bin + 1])
                 I = romberg_integrator(func, bounds=bounds, order=7)
                 return I / bin_widths[bin]
-            
-            Ntilde_model = np.array([
-                model(bin) for bin in np.arange(nbins)
-            ])
-            err_data = np.sqrt(Ntilde_model) # poissonian property
-        
+
+            Ntilde_model = np.array([model(bin) for bin in np.arange(nbins)])
+            err_data = np.sqrt(Ntilde_model)  # poissonian property
+
             return np.sum(
-                (Ntilde_data - Ntilde_model)*(Ntilde_data - Ntilde_model)
-                /
-                (err_data*err_data)
-                )
-        
-        # use downhill simplex to find parametrization that 
-        # minimizes chi2   
+                (Ntilde_data - Ntilde_model)
+                * (Ntilde_data - Ntilde_model)
+                / (err_data * err_data)
+            )
+
+        # use downhill simplex to find parametrization that
+        # minimizes chi2
         p_opt = downhill_simplex(chi2_temp, x_init=x_init)
-        
-        # store the best smallest chi2 value found and the 
+
+        # store the best smallest chi2 value found and the
         # corresponding parametrization
         min_chi2_values.append(chi2_temp(p_opt))
         best_params_chi2.append(p_opt)
@@ -233,7 +231,7 @@ def do_question_1b():
         # log-log scaling
         ax.set_xscale("log")
         ax.set_yscale("log")
-        ax.set_ylim(0.5*np.min(Ntilde_data), 2*np.max(Ntilde_data))
+        ax.set_ylim(0.5 * np.min(Ntilde_data), 2 * np.max(Ntilde_data))
         ax.legend()
 
     # Save the figure with all subplots

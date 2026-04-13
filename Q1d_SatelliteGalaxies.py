@@ -170,7 +170,7 @@ def Gtest(y_data: np.ndarray, y_model: np.ndarray) -> float:
     return 2 * np.sum(y_data * np.log(y_data / y_model))
 
 
-def Qscore(k:int, x:float) -> float:
+def Qscore(k: int, x: float) -> float:
     """
     computes probability of finding a chi^2 at least
     as bad as x by chance, given k degrees of freedom.
@@ -182,10 +182,10 @@ def Qscore(k:int, x:float) -> float:
     Returns:
         float: Qscore
     """
-    # we are allowed to use special library functions 
-    # to compute the gamma functions. 
-    # scipy.special.gammainc computes P(x,k) directly. 
-    Pkx = gammainc(0.5*k, 0.5*x)
+    # we are allowed to use special library functions
+    # to compute the gamma functions.
+    # scipy.special.gammainc computes P(x,k) directly.
+    Pkx = gammainc(0.5 * k, 0.5 * x)
     return 1 - Pkx
 
 
@@ -236,7 +236,7 @@ def do_question_1d():
         data = bin_counts
         Nsat = np.sum(bin_counts)
 
-        # define the model 
+        # define the model
         def model(bin, a, b, c):
             func = lambda x: satellite_number(
                 x=x,
@@ -248,37 +248,37 @@ def do_question_1d():
             )
             # integrate the number counts over the bin, set order for computational speed.
             I = romberg_integrator(func, (bin_edges[bin], bin_edges[bin + 1]), order=5)
-            return I 
+            return I
 
         # G-test requires that sum_i O_i = sum_i E_i:
         # the total of the two data set counts must be equal.
-       
+
         # generate expected data from chi2 fit:
         chi2_data = np.array([model(bin, *p_chi2) for bin in np.arange(nbins)])
         E_tot = np.sum(chi2_data)
         O_tot = np.sum(data)
-        chi2_data *= O_tot/E_tot
-        
+        chi2_data *= O_tot / E_tot
+
         G_score_chi2 = Gtest(data, chi2_data)
         G_scores_chi2.append(G_score_chi2)
-        
+
         # generate expected data from poisson fit:
         poisson_data = np.array([model(bin, *p_poisson) for bin in np.arange(nbins)])
         E_tot = np.sum(poisson_data)
         O_tot = np.sum(data)
-        poisson_data *= O_tot/E_tot
-        
+        poisson_data *= O_tot / E_tot
+
         G_score_poisson = Gtest(data, poisson_data)
         G_scores_poisson.append(G_score_poisson)
-        
-        # the degrees of freedom is given by 
+
+        # the degrees of freedom is given by
         # k = N - M
         # where
         #   N is the number of data points: amount of bins
         #   M is the number of independent parameters: 3
         k = nbins - 3
         print("k:", k)
-        
+
         # we compute the Qscores by inputting Gscores:
         Q_score_chi2 = Qscore(k, G_score_chi2)
         Q_scores_chi2.append(Q_score_chi2)
