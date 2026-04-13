@@ -46,14 +46,14 @@
 \begin{document}
 \maketitle
 
-\textit{Write a short description of your solution in each section. Explain your choices. Explicitly draw conclusions from your results.}
-
-\textit{You can refer to selected lines of code where you think it is necessary. However, you must provide the full code relevant to each (sub)question below it.}
-
-\textit{Don't forget to describe your figures and mention what conclusions you draw from them!}
-
 
 \section{Satellite galaxies around a massive central}
+
+
+
+
+
+
 
 \subsection{(1a) Maximum of N(x)}
 
@@ -66,16 +66,18 @@ where $n(x)$ is the number density of satellite galaxies given by
 \begin{equation}
 n(x) = A \langle N_\mathrm{sat} \rangle 
 \left( \frac{x}{b}\right)^{a-3}
-\exp\left[-\left(\frac{x}{b}\right)^c\right].
+\exp\left[-\left(\frac{x}{b}\right)^c\right],
 \end{equation}
-First we inspect the function of interest by plotting it over the range $x \in [10^-4, 5]$ (see Fig. \ref{Fig: Satellite_number_plot}).
+with $a=2.4$, $b=0.25$, and $c=1.6$.
+First we inspect the function of interest by plotting it over the range $x \in [10^{-4}, 5]$ (see Fig. \ref{Fig: Satellite_number_plot}).
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{\PlotDir/1a_N(x).png}
 \caption{Expected number of satellites at a given radius x.}
 \label{Fig: Satellite_number_plot}
 \end{figure}
-We see that it has a maximum somewhere in between $x=0.1$ and $x=1$, while not containing any other local maxima. 
+We see that the function lives in logspace, so we will search the minimum in logspace as well.
+We also note that it has a maximum somewhere in between $x=0.1$ and $x=1$, while not containing any other local maxima. 
 In order to find the maximum, we employ a golden section search that \textbf{minimizes} the negative of the function of interest. 
 Golden section search iteratively tightens a bracket in a self-similar fashion. 
 A bracket is a set of 3 x-values where the middle point attains a lower value than the two edge points.
@@ -84,6 +86,9 @@ Although we could construct our own bracket by inspecting Fig. \ref{Fig: Satelli
 we instead use a golden ratio bracketing algorithm implemented in the Minimizer class (see code snippet).
 This also speeds up the code in general, as it starts off with a bracket where 
 the ratio of distances between the 3 x-values is the golden ratio.
+We employ this algorithm as it is stable, and since calling the function 
+is not too computationally intensive, the extra calls the algorithm requires does not 
+cost a lot more computation time.
 
 The maximum of \(N(x)\) is found at:
 $$x_{\text{max}} \approx  \input{\CalcDir/satellite_max_x.txt} $$
@@ -93,12 +98,54 @@ $$N(x_{\text{max}}) \approx  \input{\CalcDir/satellite_max_Nx.txt} $$
 \lstinputlisting[language=Python]{\CodeDir/minimizer.txt}
 
 \subsubsection{Code for N(x) maximization}
-NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
 \lstinputlisting[language=Python]{\CodeDir/satellites_maximize_code.txt}
+
+
+
+
+
+
 
 \subsection{(1b) $\chi^2$-fit}
 
 Argue the choices of your binning. Explain the minimization routine used. Bonus points for a correctly implemented derivative-based routine.
+
+As we already saw in question a, the function of interest lives in logspace. Hence we bin the data logarithmically.
+We choose 20 bins, as this does not leave too many bins empty, 
+while still capturing the cutoff feature at large radius of the profile properly.
+The range of radii over which we bin is set by $[0.5r_\matrm{min}, 2r_\mathrm{max}]$,
+where $\matrm{min}, r_\mathrm{max}$ denote the minimum and maximum radii of satellites found in the data. 
+We choose this range to also pass on the information of the emptyness just outside of the range of radii in the data,
+because empty bins also contain information. 
+
+We further process the data by normalizing the counts in each bin by the number of halos
+and the width of each bin. 
+This last step ensures that the general height of the data is not dependent on the choice of bins,
+which is especially important when using logspace bins.
+We compute the average number of satellites per halo by dividing the number of satellites and by the number of halos.
+
+To find the parameters $a,b,c$ that minimize $\chi^2$, we employ the downhill simplex algorithm.
+This algorithm stores 4 points in parameter space and sorts these based on the $\chi^2$ value attained.
+For each iteration, the algorithm proposes a new set of parameters $p_\mathrm{new} = (a, b, c)$.
+If the new proposed parameters are better than the worst, it replaces it. In case,
+the proposed set of parameters is the best set of parameters so far, it explores further in that direction.
+When the algorithm starts getting closer to the actual minimum, it shrinks the 4 points to 
+explore the minimum with greater precision.
+We set quite a low tolerance for terminating the algorithm, to prevent termination 
+in saddles. 
+
+To ensure that we compare each set of parameters properly, we recompute the normalization factor $A$ at every iteration
+such that the expected number of satellites for each halo equals the average number of satellites per halo found 
+in the data.  
+This normalization requires integrating the model over the range of radii over which we binned the data.
+We perform this integration with the romberg integration algorithm which uses an open method to handle the 
+potentially undefined behaviour at x=0 for values of $a< 1$ which our algorithm might explore. 
+Despite the longer computation time, we choose a high level of precision for this normalization, 
+so that our minimization algorithm is not biased.
+
+We use the poissonic nature of the data to determine the errors on the bin counts:
+For each iteration the error son the bin counts are given by the square root of 
+the expected count as given by the parametrized model. 
 
 \begin{table}[H]
 \centering
@@ -112,16 +159,35 @@ Dataset & $N_{\mathrm{sat}}$ & $\chi^2$ & $a$ & $b$ & $c$ \\
 \end{tabular}
 \end{table}
 
+We see that the fits are reasonably accurate. Suprisingly the $chi^2$ values grow monotonically when 
+looking at heavier halos. I am not entirely sure why this is, but a possible explanation is that
+there are less and less actual data points, since there are less
+satellites in total. In turnthe $chi^2$ distribution is less and less 
+accurate, so a high value of $chi^2$ does not directly imply a bad fit.
+
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{\PlotDir/satellite_fits_chi2.png}
 \caption{Fit of the satellite number density profile using the chi-squared method.}
 \end{figure}
 
+\subsubsection{Code for romberg integration}
+\lstinputlisting[language=Python]{\CodeDir/romberg_integrator.txt}
+
+\subsubsection{Code for sorter class}
+\lstinputlisting[language=Python]{\CodeDir/sorter.txt}
+
+\subsubsection{Code for downhill simplex algorithm}
+\lstinputlisting[language=Python]{\CodeDir/downhill_simplex.txt}
+
 \subsubsection{Code for $\chi^2$-fit}
-NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
 \lstinputlisting[language=Python]{\CodeDir/satellites_chi2_code.txt}
  
+
+
+
+
+
 \subsection{(1c) Poisson ln-likelihood fit}
 
 Explain how you determine the Poisson ln-likelihood. Describe the optimization method used. 
@@ -152,7 +218,7 @@ Maximizing the likelihood is equivalent to minimizing the negative log-likehood 
   -\sum_{i=0}^{N-1} 
   \left[
     y_i \ln (\mu(x_i|p)) 
-    - \frac{\mu(x_i|p)}
+    - \mu(x_i|p)
     - \ln(y_i!)
   \right].
 \end{equation}
@@ -164,7 +230,7 @@ Writing out the sum this becomes
     y_i \ln (\mu(x_i|p)) 
   +
   \sum_{i=0}^{N-1} 
-    \frac{\mu(x_i|p)}
+   \mu(x_i|p)
   +
   \sum_{i=0}^{N-1} 
     \ln(y_i!).
@@ -190,10 +256,19 @@ $g(p)$ can then be rewritten to:
 \end{equation}
 Where $i$ now sums over all the data points and $x_i$ is the value of each data point.
 
+maximizing the likelihood is now equivalent to minimimizing $g$. We employ a
+downhill simplex algorithm, to find the parameters that minimize $g$. An overview of this 
+algorithm has already been given in part b. 
+
+We see that the fits are again reasonably accurate, but they do differ from the fits found using 
+the $chi^2$ routine. In particular we see that the at smaller radii, the $chi^2$ routine adjusts its 
+slope more severely for the bumps, leading to a flatter slope overall. This makes sense, 
+as a Gaussian distribution has a lot less probablity when sampling far above the mean, compared 
+to a Poisson distribution with a low mean.
 
 \begin{table}[H]
 \centering
-\caption{Best-fit parameters for $\chi^2$ fits.}
+\caption{Best-fit parameters for Poisson fits.}
 \begin{tabular}{|c|c|c|c|c|}
 \hline
 Dataset  & llh & $a$ & $b$ & $c$ \\
@@ -210,8 +285,11 @@ Dataset  & llh & $a$ & $b$ & $c$ \\
 \end{figure}
 
 \subsubsection{Code for Poisson ln-likelihood fit}
-NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
 \lstinputlisting[language=Python]{\CodeDir/satellites_poisson_code.txt}
+
+
+
+
 
 \subsection{(1d) Statistical tests}
 
@@ -228,15 +306,46 @@ Method & Dataset & G & Q\\
 \end{tabular}
 \end{table}
 
-What can you conclude from the results of the statistical tests?
+We see that the Q-test favors the Poisson fit for all data except the final data set.
+In particular, the Q-test rejects the $chi^2$ fits altogether for the first 4 data sets,
+as it returns values $<0.01$. This is expected, since we know that the data is generated 
+Poissonically: we are counting the number of satellites found in a certain radial bin. 
+We conclude that the $chi^2$ approach does not accurately capture the nature of the data
+and leads to biased fits. Meanwhile the Poisson fitting does an excellent job, since 
+for all data sets it return Q-values $>0.1$, which is an indication that it does 
+accurately capture the way the data is generated.
 
 \subsubsection{Code for statistical tests}
-NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
 \lstinputlisting[language=Python]{\CodeDir/satellites_statistical_tests_code.txt}
+
+
+
+
+
+
 
 \subsection{(1e) \textbf{Bonus} Monte Carlo simulation}
 
-Pick a single dataset. Describe the implementation of your Monte Carlo parametric bootstrap. 
+We pick the 4th dataset, as this one does not contain too many satellites, 
+hence sampling the same number of satellites is not as computationally expensive. 
+
+We use rejection sampling to generate 30 sets of pseudo-data from the models
+parametrized by $a, b, c$ found in parts b and c. To speed up the sampling 
+process ever so slightly, we use the routine from part a to compute the maxima $N_\mathrm{max}$
+of the probability distributions for radii of satellites for these parametrizations.
+We then sample the 2d surface spanned by $x\in [0, 5]$ and $y \in [0, 1.01 N_\mathrm{max}]. $
+We sample an ever slightly larger range in y to account for error in the estimate of $N_\mathrm{max}$.
+This effects the sampling efficiently only at the percent level.
+
+We perform the same minimization routines on the pseudo data as discussed in sections b and c
+and plot the pseudo-fits in grey. We also plot the mean of the pseudo parametrizations in orange 
+and compare it to the original best fit parametrizations. 
+We see that for the Poisson approach the pseudo-mean overlaps with the original fit and the spread 
+in pseudo-fits is not large. Meanwhile, the $chi^2$ pseudo-mean is significantly greater at 
+small radii compared to the original fit. Also the spread in pseudo-fits is a lot larger. 
+
+This is once again a confirmation that the data is not generated with gaussian noise, so 
+employing a $chi^2$ minimization routine leads to biased results.
 
 \begin{figure}[H]
 \centering
@@ -250,8 +359,13 @@ Pick a single dataset. Describe the implementation of your Monte Carlo parametri
 \caption{Best Poisson-likelihood fit profiles using pseudo-experiments. }
 \end{figure}
 
+\subsubsection{Code for random number generator}
+\lstinputlisting[language=Python]{\CodeDir/rng.txt}
+
+\subsubsection{Code for distribution class, which contains the rejection sampler}
+\lstinputlisting[language=Python]{\CodeDir/distribution.txt}
+
 \subsubsection{Code for Monte Carlo simulation}
-NOTE: all code is reproduced below as an example, show only the relevant lines for this exercise here instead.
 \lstinputlisting[language=Python]{\CodeDir/satellites_monte_carlo_code.txt}
 
 \end{document}
