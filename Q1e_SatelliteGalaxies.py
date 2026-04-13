@@ -275,14 +275,6 @@ def do_question_1e():
         # we divide by bin_widths so the data height does not depend on choice of bins
         Ntilde_data_chi2 = bin_counts_chi2 / (nhalo * bin_widths)  # "per halo"
         
-        # construct the y_data for poisson:
-        # mean number of satellites per halo in each radial bin, Ni
-        bin_counts_poisson = np.histogram(pseudo_radius_poisson, bin_edges)[
-            0
-        ]  # "mean number of satellites in each radial bin"
-        # we divide by bin_widths so the data height does not depend on choice of bins
-        Ntilde_data_poisson = bin_counts_poisson / (nhalo * bin_widths)  # "per halo"
-        
         ##
         # chi2 fitting:
         ##
@@ -327,7 +319,7 @@ def do_question_1e():
         
         # use downhill simplex to find parametrization that
         # minimizes g
-        p_opt_poisson = downhill_simplex(lambda abc: g(*abc, radius), x_init=x_init)
+        p_opt_poisson = downhill_simplex(lambda abc: g(*abc, pseudo_radius_poisson), x_init=x_init)
         pseudo_poisson_params.append(p_opt_poisson)
 
 
@@ -338,18 +330,18 @@ def do_question_1e():
     plt.figure(figsize=(6.4, 4.8))
     for params in pseudo_chi2_params:
         plt.plot(
-            x_plot, np.ones_like(x_plot)
+            x_plot, satellite_number(x_plot, get_normalization_constant(*params), Nsat, *params),
         )  # plot the best-fit model for each pseudo-dataset using the best-fit parameters found from chi-squared minimization
 
     plt.plot(
-        x_plot, np.ones_like(x_plot)
+        x_plot, satellite_number(x_plot, get_normalization_constant(*best_params_chi2), Nsat, *best_params_chi2)
     )  # plot the original best-fit model using the best-fit parameters found from chi-squared minimization on the real data
 
     mean_params_chi2 = np.mean(
         pseudo_chi2_params, axis=0
     )  # calculate the mean of the best-fit parameters from the pseudo-datasets
     plt.plot(
-        x_plot, np.ones_like(x_plot)
+        x_plot, satellite_number(x_plot, get_normalization_constant(*mean_params_chi2), Nsat, *mean_params_chi2)
     )  # plot the mean of the best-fit models from the pseudo-datasets
 
     plt.title(f"Monte Carlo simulations - chi2 fit - Data file: {datafiles[index]}")
@@ -365,17 +357,17 @@ def do_question_1e():
     plt.figure(figsize=(6.4, 4.8))
     for params in pseudo_poisson_params:
         plt.plot(
-            x_plot, np.ones_like(x_plot)
+            x_plot, satellite_number(x_plot, get_normalization_constant(*params), Nsat, *params)
         )  # plot the best-fit model for each pseudo-dataset using the best-fit parameters found from Poisson negative log-likelihood minimization
     plt.plot(
-        x_plot, np.ones_like(x_plot)
+        x_plot, satellite_number(x_plot, get_normalization_constant(*best_params_poisson), Nsat, *best_params_poisson)
     )  # plot the original best-fit model using the best-fit parameters found from Poisson negative log-likelihood minimization on the real data
 
     mean_params_poisson = np.mean(
         pseudo_poisson_params, axis=0
     )  # calculate the mean of the best-fit parameters from the pseudo-datasets
     plt.plot(
-        x_plot, np.ones_like(x_plot)
+        x_plot, satellite_number(x_plot, get_normalization_constant(*mean_params_poisson), Nsat, *mean_params_poisson)
     )  # plot the mean of the best-fit models from the pseudo-datasets
 
     plt.title(f"Monte Carlo simulations - Poisson fit - Data file: {datafiles[index]}")
