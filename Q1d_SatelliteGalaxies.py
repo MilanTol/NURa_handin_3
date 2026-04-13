@@ -128,34 +128,6 @@ def get_normalization_constant(a: float, b: float, c: float, order: int = 5) -> 
     return 1 / I
 
 
-# def get_normalization_constant(a: float, b: float, c: float, order: int = 5) -> float:
-#     """
-#     Calculate the normalization constant A (which is a function of a,b,c) for the satellite number density profile.
-
-#     Parameters
-#     ----------
-#     a : float
-#         Small-scale slope.
-#     b : float
-#         Transition scale.
-#     c : float
-#         Steepness of exponential drop-off.
-#     Nsat : (float, optional)
-#         Average number of satellites. Defaults to 1.
-#     order: int
-#         Order to use for romberg integrator.
-
-#     Returns
-#     -------
-#     float
-#         Normalization constant A.
-#     """
-#     # integrate in logspace
-#     func = lambda logx: np.exp(logx)*satellite_number(x=np.exp(logx), A=1, Nsat=1, a=a, b=b, c=c)
-#     I = romberg_integrator(func, (-15, np.log(5)), order=order)
-#     return 1 / I
-
-
 def Gtest(y_data: np.ndarray, y_model: np.ndarray) -> float:
     """
     returns Gtest estimate of data and model

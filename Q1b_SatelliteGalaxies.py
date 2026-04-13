@@ -205,7 +205,7 @@ def do_question_1b():
 
         # use downhill simplex to find parametrization that
         # minimizes chi2
-        p_opt = downhill_simplex(chi2_temp, x_init=x_init)
+        p_opt = downhill_simplex(chi2_temp, x_init=x_init, relerr=1e-4)
 
         # store the best smallest chi2 value found and the
         # corresponding parametrization

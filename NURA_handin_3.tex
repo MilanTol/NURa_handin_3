@@ -107,32 +107,19 @@ and the width of each bin.
 This last step is crucial to ensure that the general height of the data is not dependent on the choice of bins.
 We compute the average number of satellites per halo by dividing the number of satellites and by the number of halos.
 
-To find the parameters $a,b,c$ that minimize $\chi^2$, 
-we employ the Levenberg-Marquardt algorithm, which is designed specifically for $\chi^2$ optimization.
-We employ this algorithm despite the fact that the data is generated poissonically: the data 
-consists of discrete counts in bins. 
-
-We pass the counts in each bin and the choice of bins into the algorithm.
+To find the parameters $a,b,c$ that minimize $\chi^2$, we employ the downhill simplex algorithm.
 For each iteration, the algorithm proposes a new set of parameters $p_\mathrm{new} = (a, b, c)$.
 To ensure that we compare each set of parameters properly, we recompute the normalization factor $A$ at every iteration
 such that the expected number of satellites for each halo equals the average number of satellites per halo found 
 in the data. 
 This normalization requires integrating the model over the range of radii over which we binned the data.
-We perform this integration with the romberg algorithm which uses an open method to handle the undefined behaviour at x=0. 
-
+We perform this integration with the romberg integration algorithm which uses an open method to handle the 
+potentially undefined behaviour at x=0 for values of $a< -2$ which our algorithm might explore. 
 We use the poissonic nature of the data to determine the errors on the bin counts:
 For each iteration the error son the bin counts are given by the square root of 
 the expected count as given by the parametrized model. 
-
 We set quite a low tolerance for terminating the algorithm, to prevent termination 
-in saddles. We also set the initial guess of the parameters to 
-$a=1.5, b=0.8, c=2.5$, as these produce reasonable results. 
-The algorithm seems to not be very stable, as varying the initial parameters to 
-worse guesses sometimes leads to diverging runs. The method 
-becomes more like steepest descent after unsuccesful proposed parametrizations, 
-which is a very stable algorithm to find minima, assuming the parameter space does not 
-contain local minima. So this might be an indication that the parameter space
-is quite challging and does contain such local minima.
+in saddles. 
 
 \begin{table}[H]
 \centering

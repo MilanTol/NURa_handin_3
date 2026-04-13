@@ -249,7 +249,7 @@ def do_question_1c():
         )
 
         # we want to minimize g, using the current data set
-        func = lambda abc: g(*abc, radius)
+        func = lambda abc: g(*abc, radius, normalization_order=10)
         # find the optimal parameters with downhill_simplex
         p_opt = downhill_simplex(func, x_init=x_init)
 
@@ -271,10 +271,11 @@ def do_question_1c():
         x_plot = np.linspace(  # create x_array for plotting the model
             x_lower, x_upper, 100
         )
-        ax.stairs(Ntilde_data, edges=bin_edges, label="binned_data")
+        ax.stairs(Ntilde_data, edges=bin_edges, label="data")
         ax.plot(  # plot the model that maximizes Poisson likelihood
             x_plot,
             satellite_number(x_plot, get_normalization_constant(*p_opt), Nsat, *p_opt),
+            label='model'
         )
 
         # Add labels and title to the subplot
@@ -285,7 +286,8 @@ def do_question_1c():
         # log-log scaling
         ax.set_xscale("log")
         ax.set_yscale("log")
-        ax.set_ylim(1e-4, None)
+        ax.set_ylim(np.min(Ntilde_data), np.max(Ntilde_data))
+        ax.legend()
 
     # Save the figure with all subplots
     plt.tight_layout()
